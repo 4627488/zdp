@@ -20,8 +20,8 @@ Open a terminal in `backend/`:
 
 ```bash
 cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+uv sync
+uv run uvicorn app.main:app
 ```
 
 The API will be available at `http://localhost:8000`.
@@ -32,8 +32,8 @@ Open a new terminal in `frontend/`:
 
 ```bash
 cd frontend
-npm install
-npm run dev
+bun i
+bun run dev
 ```
 
 The application will be available at `http://localhost:5173`.
