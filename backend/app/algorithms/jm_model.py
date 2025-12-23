@@ -18,25 +18,66 @@ class JMModel(ReliabilityModel):
     def fit(self, tbf_train: np.ndarray) -> None:
         self.train_failures_count = len(tbf_train)
         train_idx = np.arange(1, self.train_failures_count + 1)
+        n = self.train_failures_count
 
+        # 1. Try Linear Regression Approximation for Initial Guess
+        # 1/TBF_i = phi(N+1) - phi*i = A + B*i
+        # B = -phi, A = phi(N+1)
         try:
-            # Initial guess: N slightly larger than observed, phi small
-            p0 = [self.train_failures_count * 1.5, 0.01]
-            # Bounds: N > observed failures
-            bounds = ([self.train_failures_count + 0.1, 0], [np.inf, 1])
+            # Filter out zero TBF for inversion (replace with small value)
+            tbf_safe = np.where(tbf_train <= 0, 1e-6, tbf_train)
+            y = 1.0 / tbf_safe
+            
+            # Polyfit degree 1
+            B, A = np.polyfit(train_idx, y, 1)
+            
+            if B < 0: # Valid JM assumption (reliability growth)
+                phi_est = -B
+                N_est = (A / phi_est) - 1
+                if N_est > n:
+                    guesses = [[N_est, phi_est]]
+                else:
+                    guesses = []
+            else:
+                guesses = []
+        except Exception:
+            guesses = []
 
-            popt, _ = curve_fit(
-                self._jm_tbf_func,
-                train_idx,
-                tbf_train,
-                p0=p0,
-                bounds=bounds,
-                maxfev=5000,
-            )
-            self.N, self.phi = popt
-        except Exception as e:
-            print(f"JM Model fitting failed: {e}")
-            self.N, self.phi = None, None
+        # 2. Add standard guesses
+        guesses.extend([
+            [n * 1.1, 0.001],
+            [n * 1.5, 0.01],
+            [n * 2.0, 0.05],
+            [n * 10.0, 0.0001],
+            [n * 100.0, 1e-5] # Very reliable system
+        ])
+        
+        # Bounds: N > observed failures
+        bounds = ([n + 0.1, 0], [np.inf, 1])
+
+        for p0 in guesses:
+            try:
+                popt, _ = curve_fit(
+                    self._jm_tbf_func,
+                    train_idx,
+                    tbf_train,
+                    p0=p0,
+                    bounds=bounds,
+                    maxfev=10000,
+                )
+                self.N, self.phi = popt
+                return
+            except Exception:
+                continue
+        
+        # 3. Fallback: If curve_fit fails but we had a valid linear estimate, use it
+        if len(guesses) > 0 and guesses[0][0] > n:
+             print("JM Model: curve_fit failed, using linear estimate fallback.")
+             self.N, self.phi = guesses[0]
+             return
+
+        print(f"JM Model fitting failed after {len(guesses)} attempts.")
+        self.N, self.phi = None, None
 
     def predict(self, n_steps: int, last_cumulative_time: float) -> np.ndarray:
         if self.N is None or self.phi is None:

@@ -18,20 +18,37 @@ class GOModel(ReliabilityModel):
         failure_counts = np.arange(1, len(tbf_train) + 1)
         self.train_failures_count = len(tbf_train)
 
-        # Initial guess and bounds as per main.py
-        try:
-            popt, _ = curve_fit(
-                self._go_func,
-                cumulative_time,
-                failure_counts,
-                p0=[len(tbf_train) * 1.2, 0.01],
-                bounds=(0, [np.inf, 1]),
-                maxfev=5000,
-            )
-            self.a, self.b = popt
-        except Exception as e:
-            print(f"GO Model fitting failed: {e}")
-            self.a, self.b = None, None
+        # Try multiple initial guesses to improve convergence
+        # a (total failures) > current failures
+        # b (rate) usually small
+        n = len(tbf_train)
+        guesses = [
+            [n * 1.1, 0.001],
+            [n * 1.2, 0.01],
+            [n * 1.5, 0.05],
+            [n * 2.0, 0.1],
+            [n * 5.0, 0.0001]
+        ]
+
+        for p0 in guesses:
+            try:
+                popt, _ = curve_fit(
+                    self._go_func,
+                    cumulative_time,
+                    failure_counts,
+                    p0=p0,
+                    bounds=(0, [np.inf, 1]),
+                    maxfev=10000,
+                )
+                self.a, self.b = popt
+                # If we found a solution, stop trying
+                return
+            except Exception:
+                continue
+        
+        # If all guesses fail
+        print(f"GO Model fitting failed after {len(guesses)} attempts.")
+        self.a, self.b = None, None
 
     def predict(self, n_steps: int, last_cumulative_time: float) -> np.ndarray:
         if self.a is None or self.b is None:

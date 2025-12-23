@@ -69,5 +69,8 @@ class BPModel(ReliabilityModel):
             np.array(pred_tbf_scaled).reshape(-1, 1)
         ).flatten()
 
+        # Ensure TBF is positive (physically impossible to have negative time between failures)
+        pred_tbf = np.maximum(pred_tbf, 1e-6)
+
         pred_cumulative = last_cumulative_time + np.cumsum(pred_tbf)
         return pred_cumulative

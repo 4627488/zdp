@@ -4,10 +4,13 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from typing import List
 
-from .schemas import PredictionRequest, PredictionResponse, AlgorithmResult, Metric
+from .schemas import PredictionRequest, PredictionResponse, AlgorithmResult, Metric, PreprocessRequest, PreprocessResponse
 from .algorithms.go_model import GOModel
 from .algorithms.jm_model import JMModel
 from .algorithms.bp_model import BPModel
+from .algorithms.new_models import StatisticalModel, BayesianModel
+from .algorithms.llm_model import LLMModel
+from .preprocessing import preprocess_data
 
 app = FastAPI(title="Reliability Prediction API")
 
@@ -19,7 +22,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-ALGORITHMS = {"GO": GOModel, "JM": JMModel, "BP": BPModel}
+ALGORITHMS = {
+    "GO": GOModel,
+    "JM": JMModel,
+    "BP": BPModel,
+    "Statistical": StatisticalModel,
+    "Bayesian": BayesianModel,
+    "LLM": LLMModel
+}
+
+
+@app.post("/preprocess", response_model=PreprocessResponse)
+async def preprocess_endpoint(request: PreprocessRequest):
+    return preprocess_data(request.data, request.config)
 
 
 @app.post("/predict", response_model=PredictionResponse)

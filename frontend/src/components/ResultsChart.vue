@@ -36,6 +36,7 @@ const chartData = computed(() => {
     const trainLength = props.trainTime.length
     const testLength = props.testTimeActual.length
     const totalLength = trainLength + testLength
+    const lastTrainValue = props.trainTime[trainLength - 1]
 
     const labels = Array.from({ length: totalLength }, (_, i) => i + 1)
 
@@ -52,7 +53,7 @@ const chartData = computed(() => {
             label: 'Actual Test Data',
             backgroundColor: '#000000',
             borderColor: '#000000',
-            data: [...Array(trainLength).fill(null), ...props.testTimeActual],
+            data: [...Array(trainLength - 1).fill(null), lastTrainValue, ...props.testTimeActual],
             pointRadius: 4,
             borderWidth: 2
         }
@@ -65,7 +66,7 @@ const chartData = computed(() => {
             label: res.name,
             backgroundColor: colors[index % colors.length],
             borderColor: colors[index % colors.length],
-            data: [...Array(trainLength).fill(null), ...res.predicted_cumulative_time],
+            data: [...Array(trainLength - 1).fill(null), lastTrainValue, ...res.predicted_cumulative_time],
             pointRadius: 3,
             borderDash: [2, 2]
         })
