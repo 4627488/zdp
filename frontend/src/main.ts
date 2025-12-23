@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import App from "./App.vue";
+import i18n from "./i18n";
 
 // Vuetify
 import "vuetify/styles";
@@ -16,4 +17,4 @@ const vuetify = createVuetify({
   },
 });
 
-createApp(App).use(vuetify).mount("#app");
+createApp(App).use(vuetify).use(i18n).mount("#app");

@@ -11,6 +11,8 @@ from .algorithms.bp_model import BPModel
 from .algorithms.new_models import StatisticalModel, BayesianModel
 from .algorithms.llm_model import LLMModel
 from .preprocessing import preprocess_data
+from .analysis import ReliabilityAnalysis
+from .schemas import PredictionRequest, PredictionResponse, AlgorithmResult, Metric, PreprocessRequest, PreprocessResponse, AnalysisInsights
 
 app = FastAPI(title="Reliability Prediction API")
 
@@ -109,6 +111,7 @@ async def predict(request: PredictionRequest):
         train_time=train_time.tolist(),
         test_time_actual=test_time_actual.tolist(),
         results=results,
+        analysis=ReliabilityAnalysis(tbf, train_time, results).analyze()
     )
 
 

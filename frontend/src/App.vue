@@ -1,11 +1,17 @@
 <template>
     <v-app>
         <v-app-bar color="primary" density="compact">
-            <v-app-bar-title>Software Reliability Prediction System</v-app-bar-title>
+            <v-app-bar-title>{{ $t('app.title') }}</v-app-bar-title>
+            <v-spacer></v-spacer>
+            <v-btn-toggle v-model="locale" mandatory density="compact" class="mr-4" color="white" variant="text">
+                <v-btn value="zh">中文</v-btn>
+                <v-btn value="en">EN</v-btn>
+            </v-btn-toggle>
             <template v-slot:extension>
                 <v-tabs v-model="activeTab" align-tabs="title">
-                    <v-tab value="preprocess">Data Preprocessing</v-tab>
-                    <v-tab value="predict">Model Prediction</v-tab>
+                    <v-tab value="preprocess">{{ $t('app.tabs.preprocess') }}</v-tab>
+                    <v-tab value="predict">{{ $t('app.tabs.predict') }}</v-tab>
+                    <v-tab value="analysis" :disabled="!results">{{ $t('app.tabs.analysis') }}</v-tab>
                 </v-tabs>
             </template>
         </v-app-bar>
@@ -18,71 +24,73 @@
                         <v-row>
                             <v-col cols="12" md="4">
                                 <v-card class="mb-4">
-                                    <v-card-title>Data & Configuration</v-card-title>
+                                    <v-card-title>{{ $t('preprocess.title') }}</v-card-title>
                                     <v-card-text>
-                                        <v-file-input label="Upload Data (CSV)" accept=".csv"
+                                        <v-file-input :label="$t('preprocess.uploadLabel')" accept=".csv"
                                             prepend-icon="mdi-file-delimited" variant="outlined"
                                             @change="handleFileUpload" :loading="parsing"
-                                            hint="Required column: 'tbf' or 'TBF'" persistent-hint></v-file-input>
+                                            :hint="$t('preprocess.uploadHint')" persistent-hint></v-file-input>
 
                                         <v-expand-transition>
                                             <div v-if="tbfData.length > 0">
                                                 <v-alert type="success" variant="tonal" density="compact" class="mb-4">
-                                                    Loaded {{ tbfData.length }} records.
+                                                    {{ $t('preprocess.loadedRecords', { n: tbfData.length }) }}
                                                 </v-alert>
                                             </div>
                                         </v-expand-transition>
 
                                         <v-divider class="my-4"></v-divider>
-                                        <div class="text-subtitle-1 mb-2">Preprocessing Options</div>
+                                        <div class="text-subtitle-1 mb-2">{{ $t('preprocess.optionsTitle') }}</div>
 
                                         <v-switch v-model="preprocessConfig.handle_missing"
-                                            label="Handle Missing Values" color="primary" density="compact"
+                                            :label="$t('preprocess.handleMissing')" color="primary" density="compact"
                                             hide-details></v-switch>
                                         <v-select v-if="preprocessConfig.handle_missing"
                                             v-model="preprocessConfig.missing_strategy"
-                                            :items="['mean', 'median', 'drop']" label="Strategy" density="compact"
-                                            variant="outlined" class="ml-4 mt-2"></v-select>
+                                            :items="['mean', 'median', 'drop']" :label="$t('preprocess.strategy')"
+                                            density="compact" variant="outlined" class="ml-4 mt-2"></v-select>
 
-                                        <v-switch v-model="preprocessConfig.detect_outliers" label="Detect Outliers"
-                                            color="primary" density="compact" hide-details></v-switch>
+                                        <v-switch v-model="preprocessConfig.detect_outliers"
+                                            :label="$t('preprocess.detectOutliers')" color="primary" density="compact"
+                                            hide-details></v-switch>
                                         <v-select v-if="preprocessConfig.detect_outliers"
                                             v-model="preprocessConfig.outlier_method" :items="['zscore', 'iqr']"
-                                            label="Method" density="compact" variant="outlined"
+                                            :label="$t('preprocess.method')" density="compact" variant="outlined"
                                             class="ml-4 mt-2"></v-select>
 
-                                        <v-switch v-model="preprocessConfig.normalize" label="Normalization"
-                                            color="primary" density="compact" hide-details></v-switch>
+                                        <v-switch v-model="preprocessConfig.normalize"
+                                            :label="$t('preprocess.normalization')" color="primary" density="compact"
+                                            hide-details></v-switch>
                                         <v-select v-if="preprocessConfig.normalize"
                                             v-model="preprocessConfig.normalization_method"
-                                            :items="['minmax', 'zscore']" label="Method" density="compact"
-                                            variant="outlined" class="ml-4 mt-2"></v-select>
+                                            :items="['minmax', 'zscore']" :label="$t('preprocess.method')"
+                                            density="compact" variant="outlined" class="ml-4 mt-2"></v-select>
 
                                         <v-btn block color="secondary" class="mt-6" @click="runPreprocessing"
                                             :disabled="tbfData.length === 0" :loading="processing">
-                                            Run Preprocessing
+                                            {{ $t('preprocess.runBtn') }}
                                         </v-btn>
                                     </v-card-text>
                                 </v-card>
 
                                 <v-card v-if="preprocessResults">
-                                    <v-card-title>Statistics</v-card-title>
+                                    <v-card-title>{{ $t('preprocess.statsTitle') }}</v-card-title>
                                     <v-table density="compact">
                                         <tbody>
                                             <tr>
-                                                <td>Original Count</td>
+                                                <td>{{ $t('preprocess.stats.originalCount') }}</td>
                                                 <td>{{ preprocessResults.stats.original_count }}</td>
                                             </tr>
                                             <tr>
-                                                <td>Processed Count</td>
+                                                <td>{{ $t('preprocess.stats.processedCount') }}</td>
                                                 <td>{{ preprocessResults.stats.processed_count }}</td>
                                             </tr>
                                             <tr>
-                                                <td>Mean</td>
+                                                <td>{{ $t('preprocess.stats.mean') }}</td>
                                                 <td>{{ preprocessResults.stats.mean.toFixed(2) }}</td>
                                             </tr>
                                             <tr>
-                                                <td>Std Dev</td>
+                                                <td>{{ $t('preprocess.stats.stdDev') }}</td>
                                                 <td>{{ preprocessResults.stats.std.toFixed(2) }}</td>
                                             </tr>
                                         </tbody>
@@ -92,13 +100,13 @@
 
                             <v-col cols="12" md="8">
                                 <v-card class="fill-height">
-                                    <v-card-title>Distribution Analysis</v-card-title>
+                                    <v-card-title>{{ $t('preprocess.distTitle') }}</v-card-title>
                                     <v-card-text style="height: 600px;">
                                         <div v-if="!preprocessResults"
                                             class="d-flex justify-center align-center fill-height text-grey">
                                             <div class="text-center">
                                                 <v-icon icon="mdi-chart-bar" size="64" class="mb-2"></v-icon>
-                                                <div>Run preprocessing to view distribution changes</div>
+                                                <div>{{ $t('preprocess.distPlaceholder') }}</div>
                                             </div>
                                         </div>
                                         <DistributionChart v-else
@@ -115,21 +123,20 @@
                         <v-row>
                             <v-col cols="12" md="4">
                                 <v-card class="mb-4">
-                                    <v-card-title>Model Configuration</v-card-title>
+                                    <v-card-title>{{ $t('predict.configTitle') }}</v-card-title>
                                     <v-card-text>
                                         <v-alert v-if="processedData.length > 0" type="info" variant="tonal"
                                             density="compact" class="mb-4">
-                                            Using processed data ({{ processedData.length }} samples)
+                                            {{ $t('predict.usingProcessed', { n: processedData.length }) }}
                                         </v-alert>
                                         <v-alert v-else type="warning" variant="tonal" density="compact" class="mb-4">
-                                            Using raw data ({{ tbfData.length }} samples). Recommend preprocessing
-                                            first.
+                                            {{ $t('predict.usingRaw', { n: tbfData.length }) }}
                                         </v-alert>
 
-                                        <v-slider v-model="trainRatio" label="Training Ratio" min="0.5" max="0.9"
-                                            step="0.05" thumb-label color="primary"></v-slider>
+                                        <v-slider v-model="trainRatio" :label="$t('predict.trainRatio')" min="0.5"
+                                            max="0.9" step="0.05" thumb-label color="primary"></v-slider>
 
-                                        <div class="text-subtitle-1 mb-2">Select Algorithms</div>
+                                        <div class="text-subtitle-1 mb-2">{{ $t('predict.selectAlgo') }}</div>
                                         <v-row dense>
                                             <v-col cols="6" v-for="algo in availableAlgorithms" :key="algo">
                                                 <v-checkbox v-model="selectedAlgorithms" :label="algo" :value="algo"
@@ -140,36 +147,40 @@
                                         <v-btn block color="primary" size="large" class="mt-6" @click="runPrediction"
                                             :disabled="(processedData.length === 0 && tbfData.length === 0) || selectedAlgorithms.length === 0"
                                             :loading="loading">
-                                            Train & Predict
+                                            {{ $t('predict.trainBtn') }}
                                         </v-btn>
                                     </v-card-text>
                                 </v-card>
 
                                 <v-card v-if="results">
                                     <v-card-title class="d-flex justify-space-between align-center">
-                                        Metrics
+                                        {{ $t('predict.metricsTitle') }}
                                         <v-btn icon="mdi-download" size="small" variant="text" @click="exportResults"
-                                            title="Export Results (CSV)"></v-btn>
+                                            :title="$t('predict.exportBtn')"></v-btn>
                                     </v-card-title>
                                     <v-table density="compact">
                                         <thead>
                                             <tr>
-                                                <th>Model</th>
-                                                <th>RMSE
-                                                    <v-tooltip activator="parent" location="top">Root Mean Square
-                                                        Error</v-tooltip>
+                                                <th>{{ $t('predict.columns.model') }}</th>
+                                                <th>{{ $t('predict.columns.rmse') }}
+                                                    <v-tooltip activator="parent" location="top">{{
+                                                        $t('predict.tooltips.rmse')
+                                                    }}</v-tooltip>
                                                 </th>
-                                                <th>MAE
-                                                    <v-tooltip activator="parent" location="top">Mean Absolute
-                                                        Error</v-tooltip>
+                                                <th>{{ $t('predict.columns.mae') }}
+                                                    <v-tooltip activator="parent" location="top">{{
+                                                        $t('predict.tooltips.mae')
+                                                    }}</v-tooltip>
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr v-for="res in results.results" :key="res.name">
                                                 <td>{{ res.name }}</td>
-                                                <td>{{ res.metrics.rmse ? res.metrics.rmse.toFixed(2) : 'N/A' }}</td>
-                                                <td>{{ res.metrics.mae ? res.metrics.mae.toFixed(2) : 'N/A' }}</td>
+                                                <td>{{ res.metrics.rmse ? res.metrics.rmse.toFixed(2) : $t('common.na')
+                                                }}</td>
+                                                <td>{{ res.metrics.mae ? res.metrics.mae.toFixed(2) : $t('common.na') }}
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </v-table>
@@ -178,13 +189,13 @@
 
                             <v-col cols="12" md="8">
                                 <v-card class="fill-height">
-                                    <v-card-title>Prediction Results</v-card-title>
+                                    <v-card-title>{{ $t('predict.resultsTitle') }}</v-card-title>
                                     <v-card-text style="height: 600px;">
                                         <div v-if="!results"
                                             class="d-flex justify-center align-center fill-height text-grey">
                                             <div class="text-center">
                                                 <v-icon icon="mdi-chart-line" size="64" class="mb-2"></v-icon>
-                                                <div>Run prediction to see results</div>
+                                                <div>{{ $t('predict.placeholder') }}</div>
                                             </div>
                                         </div>
                                         <ResultsChart v-else :train-time="results.train_time"
@@ -194,6 +205,18 @@
                             </v-col>
                         </v-row>
                     </v-window-item>
+
+                    <!-- Analysis Tab -->
+                    <v-window-item value="analysis">
+                        <div v-if="!results" class="d-flex justify-center align-center" style="height: 400px;">
+                            <div class="text-center text-grey">
+                                <v-icon icon="mdi-chart-box-outline" size="64" class="mb-2"></v-icon>
+                                <div class="text-h6">{{ $t('analysis.noDataTitle') }}</div>
+                                <div>{{ $t('analysis.noDataDesc') }}</div>
+                            </div>
+                        </div>
+                        <AnalysisDashboard v-else :analysis="results.analysis" />
+                    </v-window-item>
                 </v-window>
             </v-container>
         </v-main>
@@ -202,11 +225,14 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Papa from 'papaparse'
 import axios from 'axios'
 import ResultsChart from './components/ResultsChart.vue'
 import DistributionChart from './components/DistributionChart.vue'
+import AnalysisDashboard from './components/AnalysisDashboard.vue'
 
+const { locale, t } = useI18n()
 const activeTab = ref('preprocess')
 const tbfData = ref<number[]>([])
 const processedData = ref<number[]>([])
@@ -276,7 +302,7 @@ const runPreprocessing = async () => {
         processedData.value = response.data.processed_data
     } catch (error) {
         console.error(error)
-        alert('Preprocessing failed.')
+        alert(t('common.error'))
     } finally {
         processing.value = false
     }
@@ -296,7 +322,7 @@ const runPrediction = async () => {
         results.value = response.data
     } catch (error) {
         console.error(error)
-        alert('Prediction failed.')
+        alert(t('common.error'))
     } finally {
         loading.value = false
     }
@@ -307,9 +333,9 @@ const exportResults = () => {
 
     const rows = []
     // Header
-    const header = ['Index', 'Train/Test', 'Actual Cumulative Time']
+    const header = [t('export.index'), t('export.trainTest'), t('export.actualTime')]
     results.value.results.forEach((r: any) => {
-        header.push(`${r.name} Prediction`)
+        header.push(t('export.prediction', { model: r.name }))
     })
     rows.push(header)
 
@@ -319,14 +345,14 @@ const exportResults = () => {
 
     // Train rows
     for (let i = 0; i < trainLen; i++) {
-        const row = [i + 1, 'Train', results.value.train_time[i]]
+        const row = [i + 1, t('export.train'), results.value.train_time[i]]
         results.value.results.forEach(() => row.push('')) // No predictions for train usually in this format
         rows.push(row)
     }
 
     // Test rows
     for (let i = 0; i < testLen; i++) {
-        const row = [trainLen + i + 1, 'Test', results.value.test_time_actual[i]]
+        const row = [trainLen + i + 1, t('export.test'), results.value.test_time_actual[i]]
         results.value.results.forEach((r: any) => {
             row.push(r.predicted_cumulative_time[i] || '')
         })

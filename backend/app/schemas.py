@@ -19,10 +19,23 @@ class AlgorithmResult(BaseModel):
     metrics: Metric
 
 
+class AnalysisInsights(BaseModel):
+    laplace_factor: float
+    trend_assessment: str
+    trend_color: str
+    failure_intensity: Dict[str, List[float]]
+    tbf_trend: List[float]
+    best_model: str
+    best_rmse: Optional[float]
+    total_failures: int
+    total_time: float
+
+
 class PredictionResponse(BaseModel):
     train_time: List[float]
     test_time_actual: List[float]
     results: List[AlgorithmResult]
+    analysis: Optional[AnalysisInsights] = None
 
 
 class PreprocessingConfig(BaseModel):

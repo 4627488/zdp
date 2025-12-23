@@ -14,6 +14,9 @@ import {
 } from 'chart.js'
 import { Bar } from 'vue-chartjs'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
@@ -31,7 +34,7 @@ const chartData = computed(() => {
 
     if (props.originalDistribution) {
         datasets.push({
-            label: 'Original Distribution',
+            label: t('charts.originalDist'),
             backgroundColor: 'rgba(158, 158, 158, 0.5)',
             data: props.originalDistribution.counts
         })
@@ -39,7 +42,7 @@ const chartData = computed(() => {
 
     if (props.processedDistribution) {
         datasets.push({
-            label: 'Processed Distribution',
+            label: t('charts.processedDist'),
             backgroundColor: 'rgba(25, 118, 210, 0.5)',
             data: props.processedDistribution.counts
         })
@@ -51,7 +54,7 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -60,8 +63,9 @@ const chartOptions = {
         },
         title: {
             display: true,
-            text: 'Data Distribution'
+            text: t('charts.distribution')
         }
     }
-}
+}))
+
 </script>

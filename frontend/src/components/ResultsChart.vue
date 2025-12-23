@@ -15,6 +15,9 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 ChartJS.register(
     CategoryScale,
@@ -42,7 +45,7 @@ const chartData = computed(() => {
 
     const datasets = [
         {
-            label: 'Training Data',
+            label: t('charts.trainData'),
             backgroundColor: '#9E9E9E',
             borderColor: '#9E9E9E',
             data: [...props.trainTime, ...Array(testLength).fill(null)],
@@ -50,7 +53,7 @@ const chartData = computed(() => {
             borderDash: [5, 5]
         },
         {
-            label: 'Actual Test Data',
+            label: t('charts.actualTest'),
             backgroundColor: '#000000',
             borderColor: '#000000',
             data: [...Array(trainLength - 1).fill(null), lastTrainValue, ...props.testTimeActual],
@@ -78,28 +81,28 @@ const chartData = computed(() => {
     }
 })
 
-const chartOptions = {
+const chartOptions = computed(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
         title: {
             display: true,
-            text: 'Reliability Prediction Analysis'
+            text: t('app.title')
         }
     },
     scales: {
         x: {
             title: {
                 display: true,
-                text: 'Failure Number'
+                text: t('charts.failureNum')
             }
         },
         y: {
             title: {
                 display: true,
-                text: 'Cumulative Time'
+                text: t('charts.cumulativeTime')
             }
         }
     }
-}
+}))
 </script>
