@@ -1,4 +1,4 @@
-"""Application entry points for SRAS."""
+"""Application entry points for ZDP."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication
 from .gui.main_window import MainWindow
 
 
-APP_NAME = "SRAS 2025"
+APP_NAME = "Zero-Defect Prediction"
 
 
 def create_qt_app(argv: Sequence[str] | None = None) -> QApplication:
@@ -18,8 +18,8 @@ def create_qt_app(argv: Sequence[str] | None = None) -> QApplication:
 
     app = QApplication(list(argv) if argv is not None else sys.argv)
     app.setApplicationName(APP_NAME)
-    app.setOrganizationName("SRAS")
-    app.setOrganizationDomain("sras.local")
+    app.setOrganizationName("ZDP")
+    app.setOrganizationDomain("zdp.local")
     return app
 
 

@@ -9,7 +9,7 @@ from typing import Any, Mapping
 import numpy as np
 from scipy import stats
 
-from sras.data import FailureDataset, FailureSeriesType
+from zdp.data import FailureDataset, FailureSeriesType
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class ModelResult:
 
 
 class ReliabilityModel(ABC):
-    """Common behavior shared by all SRAS models."""
+    """Common behavior shared by all ZDP models."""
 
     name: str = "BaseModel"
     required_series_type: FailureSeriesType | None = None

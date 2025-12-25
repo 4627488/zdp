@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch import Tensor, nn
 
-from sras.data import FailureDataset, FailureSeriesType
+from zdp.data import FailureDataset, FailureSeriesType
 
 from .base import ModelResult, ReliabilityModel
 

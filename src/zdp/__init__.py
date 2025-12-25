@@ -1,4 +1,4 @@
-"""Software Reliability Analysis System core package."""
+"""Zero-Defect Prediction (ZDP) core package."""
 
 from .cli import run_cli
 from .data import FailureDataset, FailureSeriesType, load_failure_data, load_failure_dataframe

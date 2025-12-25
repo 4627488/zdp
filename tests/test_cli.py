@@ -2,7 +2,7 @@ import io
 import numpy as np
 import pandas as pd
 
-from sras.cli import run_cli
+from zdp.cli import run_cli
 
 
 def test_cli_runs_go_model(tmp_path) -> None:

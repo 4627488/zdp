@@ -1,4 +1,4 @@
-"""PDF reporting utilities for SRAS."""
+"""PDF reporting utilities for ZDP."""
 
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ else:  # pragma: no cover - optional dependency
     REPORTLAB_AVAILABLE = True
     _REPORTLAB_ERROR = None
 
-from sras.data import FailureDataset, FailureSeriesType
-from sras.services.analysis import RankedModelResult
-from sras.visualization import figure_to_png_bytes
+from zdp.data import FailureDataset, FailureSeriesType
+from zdp.services.analysis import RankedModelResult
+from zdp.visualization import figure_to_png_bytes
 
 
 SERIES_TYPE_LABELS = {

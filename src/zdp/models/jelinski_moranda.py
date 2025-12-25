@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import optimize
 
-from sras.data import FailureDataset, FailureSeriesType
+from zdp.data import FailureDataset, FailureSeriesType
 
 from .base import ModelResult, ReliabilityModel
 

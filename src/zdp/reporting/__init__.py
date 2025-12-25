@@ -1,4 +1,4 @@
-"""Reporting utilities for SRAS."""
+"""Reporting utilities for ZDP."""
 
 from .report_builder import ReportBuilder
 

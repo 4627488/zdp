@@ -1,23 +1,22 @@
-"""Yamada S-shaped reliability growth model."""
+"""Goel-Okumoto NHPP reliability growth model."""
 
 from __future__ import annotations
 
 import numpy as np
 from scipy import optimize
 
-from sras.data import FailureDataset, FailureSeriesType
+from zdp.data import FailureDataset, FailureSeriesType
 
 from .base import ModelResult, ReliabilityModel
 
 
-def _s_shaped_mean_value(t: np.ndarray, a: float, b: float) -> np.ndarray:
-    return a * (1.0 - (1.0 + b * t) * np.exp(-b * t))
+def _go_mean_value(t: np.ndarray, a: float, b: float) -> np.ndarray:
+    return a * (1.0 - np.exp(-b * t))
 
 
-class SShapedModel(ReliabilityModel):
-    name = "Yamada S-Shaped"
+class GoelOkumotoModel(ReliabilityModel):
+    name = "Goel-Okumoto"
     required_series_type = FailureSeriesType.CUMULATIVE_FAILURES
-    param_count = 2
 
     def __init__(self) -> None:
         self.a: float | None = None
@@ -32,18 +31,19 @@ class SShapedModel(ReliabilityModel):
         time_axis = dataset.time_axis
         cumulative = dataset.cumulative_failures()
 
+        bounds = (0.0, np.inf)
         params, _ = optimize.curve_fit(
-            _s_shaped_mean_value,
+            _go_mean_value,
             time_axis,
             cumulative,
+            bounds=bounds,
             p0=(cumulative.max() * 1.1, 0.01),
-            bounds=(0.0, np.inf),
             maxfev=20000,
         )
         self.a, self.b = map(float, params)
         eval_times = evaluation_times if evaluation_times is not None else time_axis
-        predictions = _s_shaped_mean_value(eval_times, self.a, self.b)
-        metrics = self.compute_metrics(cumulative, _s_shaped_mean_value(time_axis, self.a, self.b))
+        predictions = _go_mean_value(eval_times, self.a, self.b)
+        metrics = self.compute_metrics(cumulative, _go_mean_value(time_axis, self.a, self.b))
         return ModelResult(
             model_name=self.name,
             parameters={"a": self.a, "b": self.b},
@@ -53,4 +53,4 @@ class SShapedModel(ReliabilityModel):
         )
 
 
-__all__ = ["SShapedModel"]
+__all__ = ["GoelOkumotoModel"]

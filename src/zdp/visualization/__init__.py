@@ -1,4 +1,4 @@
-"""Visualization helpers for SRAS."""
+"""Visualization helpers for ZDP."""
 
 from .matplotlib_canvas import MatplotlibCanvas
 from .plots import (

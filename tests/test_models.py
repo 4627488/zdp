@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
-from sras.data import FailureDataset, FailureSeriesType
-from sras.models import (
+from zdp.data import FailureDataset, FailureSeriesType
+from zdp.models import (
     BPConfig,
     BPNeuralNetworkModel,
     EMDHybridModel,

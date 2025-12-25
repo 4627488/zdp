@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from sras.data import FailureSeriesType, load_failure_data
+from zdp.data import FailureSeriesType, load_failure_data
 
 
 def test_load_time_between_failure_csv(tmp_path) -> None:

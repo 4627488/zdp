@@ -9,7 +9,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVR
 
-from sras.data import FailureDataset, FailureSeriesType
+from zdp.data import FailureDataset, FailureSeriesType
 
 from .base import ModelResult, ReliabilityModel
 

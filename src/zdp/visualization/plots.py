@@ -1,4 +1,4 @@
-"""Matplotlib plot builders for SRAS."""
+"""Matplotlib plot builders for ZDP."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Sequence
 import numpy as np
 from matplotlib.figure import Figure
 
-from sras.data import FailureDataset, FailureSeriesType
-from sras.services.analysis import RankedModelResult
+from zdp.data import FailureDataset, FailureSeriesType
+from zdp.services.analysis import RankedModelResult
 
 
 def _actual_series(dataset: FailureDataset) -> np.ndarray:

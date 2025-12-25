@@ -7,8 +7,8 @@ from typing import Iterable, List, Sequence
 
 import numpy as np
 
-from sras.data import FailureDataset
-from sras.models import ModelResult, ReliabilityModel
+from zdp.data import FailureDataset
+from zdp.models import ModelResult, ReliabilityModel
 
 
 @dataclass

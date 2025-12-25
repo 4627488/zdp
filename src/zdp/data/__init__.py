@@ -1,4 +1,4 @@
-"""Data ingestion and preparation helpers for SRAS."""
+"""Data ingestion and preparation helpers for ZDP."""
 
 from .dataset import FailureDataset
 from .loader import load_failure_data, load_failure_dataframe

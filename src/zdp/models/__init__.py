@@ -1,4 +1,4 @@
-"""Model registry for SRAS."""
+"""Model registry for ZDP."""
 
 from .base import ModelResult, ReliabilityModel
 from .bp_neural import BPConfig, BPNeuralNetworkModel

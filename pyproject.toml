@@ -3,11 +3,11 @@ requires = ["setuptools>=65", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sras"
+name = "zdp"
 version = "0.1.0"
-description = "Software Reliability Analysis System desktop application"
+description = "Zero-Defect Prediction (ZDP) desktop application"
 readme = "README.md"
-authors = [{ name = "SRAS Team" }]
+authors = [{ name = "ZDP Team" }]
 license = { text = "Proprietary" }
 requires-python = ">=3.10"
 dependencies = [
@@ -33,8 +33,14 @@ dev = [
 ]
 
 [project.scripts]
-sras = "sras.app:run"
-sras-cli = "sras.cli:main"
+zdp = "zdp.app:run"
+zdp-cli = "zdp.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.black]
 line-length = 100
@@ -48,3 +54,4 @@ ignore = ["E203", "E501"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,4 +1,4 @@
-"""Command-line interface for SRAS analyses."""
+"""Command-line interface for ZDP analyses."""
 
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def _build_model_registry(args: argparse.Namespace) -> Mapping[str, tuple[str, M
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="sras-cli",
+        prog="zdp-cli",
         description="Run reliability models against a dataset and view ranked metrics.",
     )
     parser.add_argument("path", help="Path to the CSV/Excel dataset containing failure data.")
@@ -135,7 +135,7 @@ def run_cli(
             value_column=args.value_column,
         )
     except Exception as exc:  # pragma: no cover - argparse ensures usage
-        print(f"[SRAS] Failed to load dataset: {exc}", file=stderr)
+        print(f"[ZDP] Failed to load dataset: {exc}", file=stderr)
         return 1
 
     registry = _build_model_registry(args)
@@ -146,7 +146,7 @@ def run_cli(
         key_lower = key.lower()
         entry = registry.get(key_lower)
         if entry is None:
-            print(f"[SRAS] Unknown model identifier '{key}'.", file=stderr)
+            print(f"[ZDP] Unknown model identifier '{key}'.", file=stderr)
             return 2
         resolved_factories.append(entry[1])
 
@@ -161,18 +161,18 @@ def run_cli(
 
     if incompatible:
         print(
-            "[SRAS] Skipping incompatible models for dataset type: "
+            "[ZDP] Skipping incompatible models for dataset type: "
             + ", ".join(incompatible),
             file=stderr,
         )
     if not selected_models:
-        print("[SRAS] No compatible models available for the provided dataset.", file=stderr)
+        print("[ZDP] No compatible models available for the provided dataset.", file=stderr)
         return 3
 
     service = AnalysisService(selected_models)
     ranked = service.run(dataset)
     if not ranked:
-        print("[SRAS] No model results generated.", file=stderr)
+        print("[ZDP] No model results generated.", file=stderr)
         return 4
 
     header = f"{'#':>2}  {'Model':<20}  {'RMSE':>10}  {'MAE':>10}  {'R^2':>8}"
@@ -199,9 +199,9 @@ def run_cli(
             output_path = Path(args.report)
             builder = ReportBuilder()
             builder.build(dataset, ranked, output_path=output_path)
-            print(f"[SRAS] Report exported to {output_path}", file=stdout)
+            print(f"[ZDP] Report exported to {output_path}", file=stdout)
         except Exception as exc:  # pragma: no cover - external deps
-            print(f"[SRAS] Failed to export report: {exc}", file=stderr)
+            print(f"[ZDP] Failed to export report: {exc}", file=stderr)
             return 5
 
     return 0

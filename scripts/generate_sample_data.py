@@ -1,4 +1,4 @@
-"""Generate synthetic reliability datasets for SRAS demos."""
+"""Generate synthetic reliability datasets for ZDP demos."""
 
 from __future__ import annotations
 

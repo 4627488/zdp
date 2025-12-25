@@ -1,4 +1,4 @@
-"""PySide6 main window wiring the SRAS workflow."""
+"""PySide6 main window wiring the ZDP workflow."""
 
 from __future__ import annotations
 
@@ -35,8 +35,8 @@ from PySide6.QtWidgets import (
     QSpinBox,
 )
 
-from sras.data import FailureDataset, FailureSeriesType, load_failure_data
-from sras.models import (
+from zdp.data import FailureDataset, FailureSeriesType, load_failure_data
+from zdp.models import (
     BPConfig,
     BPNeuralNetworkModel,
     EMDHybridModel,
@@ -48,9 +48,9 @@ from sras.models import (
     SVRConfig,
     SupportVectorRegressionModel,
 )
-from sras.reporting import ReportBuilder
-from sras.services import AnalysisService, RankedModelResult
-from sras.visualization import (
+from zdp.reporting import ReportBuilder
+from zdp.services import AnalysisService, RankedModelResult
+from zdp.visualization import (
     MatplotlibCanvas,
     plot_prediction_overview,
     plot_residuals,
@@ -93,7 +93,7 @@ class ModelDescriptor:
 
 
 class MainWindow(QMainWindow):
-    """Desktop shell implementing the SRAS workflow."""
+    """Desktop shell implementing the ZDP workflow."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -405,7 +405,7 @@ class MainWindow(QMainWindow):
         output_path, _ = QFileDialog.getSaveFileName(
             self,
             "导出 PDF 报告",
-            str(Path.home() / "sras-report.pdf"),
+            str(Path.home() / "zdp-report.pdf"),
             "PDF 文件 (*.pdf)",
         )
         if not output_path:
