@@ -89,7 +89,41 @@ export default {
                 title: "Time Between Failures (TBF) Trend",
                 subtitle: "Raw interval times - Increasing trend = Reliability Growth",
                 label: "Time Between Failures"
+            },
+            rocof: {
+                title: "Rate of Occurrence of Failures (ROCOF)",
+                label: "ROCOF"
+            },
+            cumulative: {
+                title: "Cumulative Failures (S-Curve)",
+                label: "Cumulative Failures"
+            },
+            reliability: {
+                title: "Reliability Curve (Survival Probability)",
+                label: "Survival Probability P(T > t)"
+            },
+            distribution: {
+                title: "Failure Distribution (Histogram)",
+                label: "Frequency"
             }
+        },
+        deepseek: {
+            title: "AI Reliability Analysis Report (DeepSeek)",
+            placeholder: "Click 'Generate Report' to get a detailed AI analysis.",
+            loading: {
+                init: "Initializing analysis...",
+                analyzing: "Analyzing statistical patterns...",
+                connecting: "Connecting to DeepSeek AI...",
+                generating: "Generating bilingual report..."
+            }
+        },
+        report: {
+            subtitle: "Comprehensive Reliability Analysis Report",
+            generatedOn: "Generated on"
+        },
+        actions: {
+            downloadPdf: "Download PDF Report",
+            generateReport: "Generate AI Report"
         },
         insights: {
             title: "Automated Reliability Insights",

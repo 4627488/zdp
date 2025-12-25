@@ -89,7 +89,41 @@ export default {
                 title: "故障间隔时间 (TBF) 趋势",
                 subtitle: "原始间隔时间 - 上升趋势 = 可靠性增长",
                 label: "故障间隔时间"
+            },
+            rocof: {
+                title: "故障发生率 (ROCOF)",
+                label: "ROCOF"
+            },
+            cumulative: {
+                title: "累积故障数 (S曲线)",
+                label: "累积故障数"
+            },
+            reliability: {
+                title: "可靠性曲线 (生存概率)",
+                label: "生存概率 P(T > t)"
+            },
+            distribution: {
+                title: "故障分布 (直方图)",
+                label: "频率"
             }
+        },
+        deepseek: {
+            title: "AI 可靠性分析报告 (DeepSeek)",
+            placeholder: "点击“生成报告”以获取详细的 AI 分析。",
+            loading: {
+                init: "正在初始化分析...",
+                analyzing: "正在分析统计模式...",
+                connecting: "正在连接 DeepSeek AI...",
+                generating: "正在生成双语报告..."
+            }
+        },
+        report: {
+            subtitle: "综合可靠性分析报告",
+            generatedOn: "生成时间"
+        },
+        actions: {
+            downloadPdf: "下载 PDF 报告",
+            generateReport: "生成 AI 报告"
         },
         insights: {
             title: "自动化可靠性洞察",

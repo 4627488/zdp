@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "moduleResolution": "nodenext",
+        "allowSyntheticDefaultImports": true,
+        "module": "nodenext",
+        "outDir": "./dist/electron",
+        "skipLibCheck": true
+    },
+    "include": [
+        "electron/**/*.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
+}
