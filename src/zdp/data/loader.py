@@ -78,7 +78,17 @@ def load_failure_data(
         else np.arange(1, values.size + 1, dtype=float)
     )
 
-    inferred_type = series_type or _infer_series_type(values)
+    # Prefer explicit series_type; else infer from column name, finally fallback to value monotonicity
+    if series_type is not None:
+        inferred_type = series_type
+    else:
+        col_lower = resolved_value.lower().strip()
+        if col_lower in _TBF_VALUE_CANDIDATES:
+            inferred_type = FailureSeriesType.TIME_BETWEEN_FAILURES
+        elif col_lower in _CUM_VALUE_CANDIDATES:
+            inferred_type = FailureSeriesType.CUMULATIVE_FAILURES
+        else:
+            inferred_type = _infer_series_type(values)
     dataset = FailureDataset(
         time_axis=time_axis,
         values=values,
