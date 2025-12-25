@@ -47,6 +47,7 @@ from zdp.models import (
     SShapedModel,
     SVRConfig,
     SupportVectorRegressionModel,
+    GM11Model,
 )
 from zdp.reporting import ReportBuilder
 from zdp.services import AnalysisService, RankedModelResult
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow):
         self._model_checkboxes.clear()
         for descriptor in self._model_descriptors():
             checkbox = QCheckBox(f"{descriptor.label} — {descriptor.description}")
-            checkbox.setChecked(descriptor.key in {"go", "s-shaped", "svr", "bp"})
+            checkbox.setChecked(descriptor.key in {"go", "gm", "s-shaped", "svr", "bp"})
             self._model_checkboxes[descriptor.key] = checkbox
             container_layout.addWidget(checkbox)
         container_layout.addStretch()
@@ -253,6 +254,18 @@ class MainWindow(QMainWindow):
         self.metrics_table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.metrics_table)
 
+        # 图表模型选择（用于残差、U、Y 图切换不同模型）
+        selector_row = QWidget()
+        selector_layout = QHBoxLayout(selector_row)
+        selector_layout.setContentsMargins(0, 0, 0, 0)
+        selector_layout.addWidget(QLabel("图表模型"))
+        self.plot_model_combo = QComboBox()
+        self.plot_model_combo.setEnabled(False)
+        self.plot_model_combo.currentIndexChanged.connect(self._update_plots)
+        selector_layout.addWidget(self.plot_model_combo)
+        selector_layout.addStretch()
+        layout.addWidget(selector_row)
+
         self.plot_tabs = QTabWidget()
         self.prediction_canvas = MatplotlibCanvas()
         self.residual_canvas = MatplotlibCanvas()
@@ -283,6 +296,7 @@ class MainWindow(QMainWindow):
         return [
             ModelDescriptor("jm", "Jelinski-Moranda（JM）", "NHPP 间隔模型", lambda: JelinskiMorandaModel()),
             ModelDescriptor("go", "Goel-Okumoto（GO）", "NHPP 指数模型", lambda: GoelOkumotoModel()),
+            ModelDescriptor("gm", "GM(1,1)", "灰色模型（累计）", lambda: GM11Model()),
             ModelDescriptor("s-shaped", "Yamada S 曲线", "适配 S 形增长", lambda: SShapedModel()),
             ModelDescriptor(
                 "svr",
@@ -390,6 +404,7 @@ class MainWindow(QMainWindow):
             return
         self._append_log(f"分析完成，共运行 {len(results)} 个模型。")
         self._populate_metrics_table(results)
+        self._refresh_plot_model_choices(results)
         self._update_plots()
         self.export_button.setEnabled(True)
 
@@ -448,15 +463,17 @@ class MainWindow(QMainWindow):
             return
         dataset = self.dataset
         results = self.analysis_results
-        best = results[0]
+        # 预测概览：展示所有模型（不再限制为前 3）
         self.prediction_canvas.draw_plot(
-            lambda fig: plot_prediction_overview(fig, dataset, results)
+            lambda fig: plot_prediction_overview(fig, dataset, results, max_models=len(results))
         )
-        self.residual_canvas.draw_plot(
-            lambda fig: plot_residuals(fig, dataset, best)
-        )
-        self.u_canvas.draw_plot(lambda fig: plot_u_plot(fig, dataset, best))
-        self.y_canvas.draw_plot(lambda fig: plot_y_plot(fig, dataset, best))
+        # 残差 / U / Y 图：根据下拉框选择的模型绘制
+        selected = self._selected_plot_result()
+        if selected is None:
+            selected = results[0]
+        self.residual_canvas.draw_plot(lambda fig: plot_residuals(fig, dataset, selected))
+        self.u_canvas.draw_plot(lambda fig: plot_u_plot(fig, dataset, selected))
+        self.y_canvas.draw_plot(lambda fig: plot_y_plot(fig, dataset, selected))
 
     def _prepare_report_figures(self) -> dict[str, Figure]:
         from matplotlib.figure import Figure
@@ -464,7 +481,7 @@ class MainWindow(QMainWindow):
         dataset = self.dataset
         results = self.analysis_results
         assert dataset and results
-        best = results[0]
+        selected = self._selected_plot_result() or results[0]
         figures: dict[str, Figure] = {}
 
         def build(builder: Callable[[Figure], None]) -> Figure:
@@ -472,10 +489,10 @@ class MainWindow(QMainWindow):
             builder(fig)
             return fig
 
-        figures["预测概览"] = build(lambda fig: plot_prediction_overview(fig, dataset, results))
-        figures["残差分析"] = build(lambda fig: plot_residuals(fig, dataset, best))
-        figures["U 图"] = build(lambda fig: plot_u_plot(fig, dataset, best))
-        figures["Y 图"] = build(lambda fig: plot_y_plot(fig, dataset, best))
+        figures["预测概览"] = build(lambda fig: plot_prediction_overview(fig, dataset, results, max_models=len(results)))
+        figures["残差分析"] = build(lambda fig: plot_residuals(fig, dataset, selected))
+        figures["U 图"] = build(lambda fig: plot_u_plot(fig, dataset, selected))
+        figures["Y 图"] = build(lambda fig: plot_y_plot(fig, dataset, selected))
         return figures
 
     def _append_log(self, message: str) -> None:
@@ -487,3 +504,22 @@ class MainWindow(QMainWindow):
             FailureSeriesType.CUMULATIVE_FAILURES: "累计故障数",
         }
         return mapping.get(series_type, series_type.value)
+
+    # ------------------------------------------------------------------
+    # Plot selection helpers
+    def _refresh_plot_model_choices(self, results: Sequence[RankedModelResult]) -> None:
+        self.plot_model_combo.blockSignals(True)
+        self.plot_model_combo.clear()
+        for ranked in results:
+            self.plot_model_combo.addItem(f"{ranked.rank}. {ranked.result.model_name}")
+        self.plot_model_combo.setEnabled(True)
+        self.plot_model_combo.setCurrentIndex(0)
+        self.plot_model_combo.blockSignals(False)
+
+    def _selected_plot_result(self) -> RankedModelResult | None:
+        if not self.analysis_results:
+            return None
+        idx = self.plot_model_combo.currentIndex()
+        if idx < 0 or idx >= len(self.analysis_results):
+            return None
+        return self.analysis_results[idx]

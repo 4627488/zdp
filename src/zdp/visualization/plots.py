@@ -57,17 +57,28 @@ def plot_residuals(figure: Figure, dataset: FailureDataset, result: RankedModelR
     ax.set_ylabel("Actual - Predicted")
 
 
-def _normalized(values: np.ndarray) -> np.ndarray:
-    vmax = float(np.max(values))
-    if vmax == 0:
-        return np.zeros_like(values)
-    return values / vmax
+def _normalized_cdf(values: np.ndarray) -> np.ndarray:
+    """Normalize a sequence to a CDF [0,1] with monotonic enforcement.
+
+    - Clips negatives to 0
+    - Enforces non-decreasing via cumulative maximum
+    - Divides by the final total (last element) for time-consistent scaling
+    """
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        return arr
+    arr = np.clip(arr, 0.0, None)
+    arr = np.maximum.accumulate(arr)
+    total = float(arr[-1])
+    if total <= 0.0:
+        return np.zeros_like(arr)
+    return arr / total
 
 
 def plot_u_plot(figure: Figure, dataset: FailureDataset, result: RankedModelResult) -> None:
     ax = figure.add_subplot(111)
-    actual = _normalized(_actual_series(dataset))
-    predicted = _normalized(_ensure_array(result.result.predictions))
+    actual = _normalized_cdf(_actual_series(dataset))
+    predicted = _normalized_cdf(_ensure_array(result.result.predictions))
     length = min(actual.size, predicted.size)
     ax.plot(predicted[:length], actual[:length], "o-", label=result.result.model_name)
     ax.plot([0, 1], [0, 1], linestyle="--", color="#666666", label="Ideal")
@@ -80,8 +91,8 @@ def plot_u_plot(figure: Figure, dataset: FailureDataset, result: RankedModelResu
 
 def plot_y_plot(figure: Figure, dataset: FailureDataset, result: RankedModelResult) -> None:
     ax = figure.add_subplot(111)
-    actual = np.clip(_normalized(_actual_series(dataset)), 1e-6, 1 - 1e-6)
-    predicted = np.clip(_normalized(_ensure_array(result.result.predictions)), 1e-6, 1 - 1e-6)
+    actual = np.clip(_normalized_cdf(_actual_series(dataset)), 1e-6, 1 - 1e-6)
+    predicted = np.clip(_normalized_cdf(_ensure_array(result.result.predictions)), 1e-6, 1 - 1e-6)
     length = min(actual.size, predicted.size)
     y_actual = -np.log(1.0 - actual[:length])
     y_pred = -np.log(1.0 - predicted[:length])

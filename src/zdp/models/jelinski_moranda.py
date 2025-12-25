@@ -25,21 +25,51 @@ class JelinskiMorandaModel(ReliabilityModel):
         evaluation_times: np.ndarray | None = None,
     ) -> ModelResult:
         intervals = dataset.failure_intervals()
-        n_failures = intervals.size
-        initial_guess = np.array([max(n_failures + 5.0, n_failures * 1.2), 1.0 / intervals.mean()])
+        n = intervals.size
+        if n < 2:
+            raise RuntimeError("JM model requires at least 2 failures")
 
-        result = optimize.minimize(
-            self._neg_log_likelihood,
-            initial_guess,
-            args=(intervals,),
-            bounds=((n_failures + 1.0, None), (1e-9, None)),
-            method="L-BFGS-B",
-        )
-        if not result.success:
-            raise RuntimeError(f"JM optimization failed: {result.message}")
+        total_time = float(np.sum(intervals))
+        if total_time <= 0:
+            raise RuntimeError("JM model requires positive time intervals")
 
-        self.n0, self.phi = result.x
-        predictions = self._expected_intervals(n_failures)
+        # Statistic p = sum((i-1)*x_i) / sum(x_i), i from 1..n (0-based index used here)
+        indices_0 = np.arange(n, dtype=float)
+        weighted_time = float(np.sum(indices_0 * intervals))
+        p = weighted_time / total_time
+
+        # Existence condition for finite N0: p > (n-1)/2
+        threshold = (n - 1) / 2.0
+
+        def mle_eq(N: float) -> float:
+            k = np.arange(n, dtype=float)
+            term1 = np.sum(1.0 / (N - k))
+            term2 = n / (N - p)
+            return term1 - term2
+
+        if p <= threshold:
+            # No growth detectable; degrade to near-constant rate with large N0
+            self.n0 = float(n * 1e6)
+            denom = self.n0 * total_time - weighted_time
+            self.phi = n / max(denom, 1e-12)
+        else:
+            lower = n - 1 + 1e-6
+            upper = lower * 2.0
+            for _ in range(80):
+                if mle_eq(upper) < 0:
+                    break
+                lower = upper
+                upper *= 2.0
+            try:
+                root = optimize.brentq(mle_eq, lower, upper)
+                self.n0 = float(root)
+            except ValueError:
+                # Fallback if bracketing fails: use large N0 to avoid negative lambdas
+                self.n0 = float(n * 1e6)
+            denom = self.n0 * total_time - weighted_time
+            self.phi = n / max(denom, 1e-12)
+
+        predictions = self._expected_intervals(n)
         metrics = self.compute_metrics(intervals, predictions)
         times = dataset.time_axis if evaluation_times is None else evaluation_times
         return ModelResult(
@@ -55,6 +85,7 @@ class JelinskiMorandaModel(ReliabilityModel):
             raise RuntimeError("Model must be fitted before predicting intervals")
         indices = np.arange(1, count + 1)
         lambdas = self.phi * (self.n0 - indices + 1)
+        lambdas = np.maximum(lambdas, 1e-12)  # clamp to avoid negatives/zeros
         return 1.0 / lambdas
 
     @staticmethod

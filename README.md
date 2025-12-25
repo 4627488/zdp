@@ -13,7 +13,7 @@
 
 ## 命令行（CLI）
 - 基本用法：`uv run zdp-cli data.csv --time-column t --value-column failures`
-- 仅运行部分模型：`uv run zdp-cli data.csv --model jm --model go`
+- 仅运行部分模型：`uv run zdp-cli data.csv --model jm --model go --model gm`
 - 导出 PDF 报告：`uv run zdp-cli data.csv --report zdp-report.pdf`
 
 ## 代码入口
@@ -34,3 +34,10 @@
 │   └── zdp/              # 主包
 └── tests/
 ```
+
+## 模型显示与图表说明
+- 预测曲线：现已展示所有运行成功的模型，不再仅限排名前 3（早期版本因 `plot_prediction_overview(max_models=3)` 导致部分模型未显示）。
+- 残差分析 / U 图 / Y 图：界面新增“图表模型”下拉选择，可切换对应模型的曲线（早期版本始终使用最佳模型）。
+- 数据类型限制：`BP` 与 `SVR` 仅支持“累计故障数”数据。如果导入的是“故障间隔（TBF）”数据，这两类模型将被自动跳过，因此不会在图表或表格中出现。
+ - GM 说明：现已提供独立 `GM(1,1)` 模型（累计故障数），并可在 GUI/CLI 中选择；同时“EMD-SVR/GM 混合”模型仍包含 GM 平滑能力。
+

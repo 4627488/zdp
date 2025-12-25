@@ -7,6 +7,7 @@ from .hybrid import EMDHybridModel, HybridConfig
 from .jelinski_moranda import JelinskiMorandaModel
 from .s_shaped import SShapedModel
 from .svr import SVRConfig, SupportVectorRegressionModel
+from .gm import GM11Model, GMConfig
 
 __all__ = [
     "ModelResult",
@@ -20,4 +21,6 @@ __all__ = [
     "SVRConfig",
     "EMDHybridModel",
     "HybridConfig",
+    "GM11Model",
+    "GMConfig",
 ]

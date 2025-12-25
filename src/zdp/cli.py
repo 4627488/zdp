@@ -21,6 +21,7 @@ from .models import (
     SShapedModel,
     SVRConfig,
     SupportVectorRegressionModel,
+    GM11Model,
 )
 from .reporting import ReportBuilder
 from .services import AnalysisService
@@ -51,6 +52,7 @@ def _build_model_registry(args: argparse.Namespace) -> Mapping[str, tuple[str, M
         "jelinski-moranda": (JelinskiMorandaModel.name, JelinskiMorandaModel),
         "go": (GoelOkumotoModel.name, GoelOkumotoModel),
         "goel-okumoto": (GoelOkumotoModel.name, GoelOkumotoModel),
+        "gm": (GM11Model.name, GM11Model),
         "s-shaped": (SShapedModel.name, SShapedModel),
         "s": (SShapedModel.name, SShapedModel),
         "bp": (BPNeuralNetworkModel.name, lambda: BPNeuralNetworkModel(bp_config)),
@@ -139,7 +141,7 @@ def run_cli(
         return 1
 
     registry = _build_model_registry(args)
-    default_models = ["jm", "go", "s-shaped", "svr", "bp", "hybrid"]
+    default_models = ["jm", "go", "gm", "s-shaped", "svr", "bp", "hybrid"]
     requested = args.models or default_models
     resolved_factories: list[ModelFactory] = []
     for key in requested:
