@@ -1,15 +1,31 @@
-# Python-generated files
+# Python artifacts
 __pycache__/
-*.py[oc]
+*.py[cod]
+*.pyo
+*.pyd
+*.swp
+
+# Distribution / packaging
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+.env/
 
-node_modules
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
 
-# electron-builder output
-release/
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

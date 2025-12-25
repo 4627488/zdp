@@ -1,18 +1,50 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "backend"
+name = "sras"
 version = "0.1.0"
-description = "Add your description here"
+description = "Software Reliability Analysis System desktop application"
 readme = "README.md"
-requires-python = ">=3.13"
+authors = [{ name = "SRAS Team" }]
+license = { text = "Proprietary" }
+requires-python = ">=3.10"
 dependencies = [
-    "fastapi>=0.125.0",
-    "numpy>=2.3.5",
-    "openai>=2.14.0",
-    "pandas>=2.3.3",
-    "pydantic>=2.12.5",
-    "python-dotenv>=1.2.1",
-    "python-multipart>=0.0.21",
-    "scikit-learn>=1.7.2",
-    "scipy>=1.16.3",
-    "uvicorn>=0.38.0",
+    "pyside6>=6.7,<7",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "pyqtgraph>=0.13",
+    "statsmodels>=0.14",
+    "scikit-learn>=1.4",
+    "torch>=2.2",
+    "reportlab>=4.1",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+    "black>=24.8",
+    "mypy>=1.11",
+]
+
+[project.scripts]
+sras = "sras.app:run"
+sras-cli = "sras.cli:main"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I"]
+ignore = ["E203", "E501"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
