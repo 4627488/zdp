@@ -42,7 +42,11 @@ class AnalysisService:
         for model in self._models:
             if not model.supports(dataset.series_type):
                 continue
-            results.append(model.fit(dataset, evaluation_times=evaluation_times))
+            try:
+                results.append(model.fit(dataset, evaluation_times=evaluation_times))
+            except Exception:
+                # Skip models that cannot be fitted for the given dataset.
+                continue
         results.sort(key=lambda r: r.metrics.get("rmse", float("inf")))
         ranked = [RankedModelResult(rank=i + 1, result=res) for i, res in enumerate(results)]
         return ranked

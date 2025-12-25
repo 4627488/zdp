@@ -41,33 +41,59 @@ class JelinskiMorandaModel(ReliabilityModel):
         # Existence condition for finite N0: p > (n-1)/2
         threshold = (n - 1) / 2.0
 
+        if p <= threshold:
+            # Standard JM MLE condition: no finite solution exists.
+            raise RuntimeError(
+                f"JM has no finite MLE solution for this dataset (P={p:.6f} <= (n-1)/2={threshold:.6f})."
+            )
+
         def mle_eq(N: float) -> float:
             k = np.arange(n, dtype=float)
             term1 = np.sum(1.0 / (N - k))
             term2 = n / (N - p)
             return term1 - term2
 
-        if p <= threshold:
-            # No growth detectable; degrade to near-constant rate with large N0
-            self.n0 = float(n * 1e6)
-            denom = self.n0 * total_time - weighted_time
-            self.phi = n / max(denom, 1e-12)
+        # Bisection-style solve, mirroring the typical teaching implementation.
+        ex = 1e-6
+        ey = 1e-6
+        left = (n - 1) + 1e-6
+        right = max(float(n), left + 1.0)
+
+        f_right = mle_eq(right)
+        steps = 0
+        while f_right > ey:
+            left = right
+            right = right + 1.0
+            f_right = mle_eq(right)
+            steps += 1
+            if steps > 200000:
+                raise RuntimeError("JM root search failed to bracket a solution within iteration limit")
+
+        # If we've landed close enough, accept right as the root.
+        if -ey <= f_right <= ey:
+            self.n0 = float(right)
         else:
-            lower = n - 1 + 1e-6
-            upper = lower * 2.0
-            for _ in range(80):
-                if mle_eq(upper) < 0:
+            # Now f(left) should be > ey and f(right) <= ey; bisect until convergence.
+            for _ in range(200000):
+                if abs(right - left) <= ex:
+                    self.n0 = float((right + left) / 2.0)
                     break
-                lower = upper
-                upper *= 2.0
-            try:
-                root = optimize.brentq(mle_eq, lower, upper)
-                self.n0 = float(root)
-            except ValueError:
-                # Fallback if bracketing fails: use large N0 to avoid negative lambdas
-                self.n0 = float(n * 1e6)
-            denom = self.n0 * total_time - weighted_time
-            self.phi = n / max(denom, 1e-12)
+                mid = (right + left) / 2.0
+                f_mid = mle_eq(mid)
+                if f_mid > ey:
+                    left = mid
+                elif f_mid < -ey:
+                    right = mid
+                else:
+                    self.n0 = float(mid)
+                    break
+            else:
+                raise RuntimeError("JM bisection failed to converge")
+
+        denom = self.n0 * total_time - weighted_time
+        if denom <= 0:
+            raise RuntimeError("JM failed to compute phi due to non-positive denominator")
+        self.phi = n / denom
 
         predictions = self._expected_intervals(n)
         metrics = self.compute_metrics(intervals, predictions)

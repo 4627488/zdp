@@ -34,7 +34,8 @@ def test_goel_okumoto_fits_synthetic_data() -> None:
 
 
 def test_jelinski_moranda_predicts_positive_intervals() -> None:
-    intervals = np.array([6.0, 5.0, 4.0, 3.5, 3.0])
+    # Use an improving (in expectation) interval sequence so JM has a finite MLE solution.
+    intervals = np.array([2.0, 3.0, 4.0, 5.0, 6.0])
     dataset = FailureDataset(
         time_axis=np.arange(1, intervals.size + 1),
         values=intervals,
