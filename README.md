@@ -16,6 +16,8 @@
 - 仅运行部分模型：`uv run zdp-cli data.csv --model jm --model go --model gm`
 - 导出 PDF 报告：`uv run zdp-cli data.csv --report zdp-report.pdf`
 
+> PDF 中文字体说明：报告导出会自动注册并嵌入可用中文字体（Windows 优先使用“微软雅黑/宋体/黑体”），用于避免中文在 PDF 中显示为黑块。
+
 ## 代码入口
 - 数据加载与类型：[src/zdp/data/__init__.py](src/zdp/data/__init__.py)
 - 模型注册与实现：[src/zdp/models/__init__.py](src/zdp/models/__init__.py)
