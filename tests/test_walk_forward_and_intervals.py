@@ -62,3 +62,52 @@ def test_cli_can_enable_walk_forward_and_prediction_interval(tmp_path) -> None:
     out = stdout.getvalue()
     assert "CV_RMSE" in out
     assert stderr.getvalue() == ""
+
+
+def test_cli_can_export_and_replay_experiment_zip(tmp_path) -> None:
+    time_axis = np.arange(1, 10)
+    failures = np.array([1, 2, 4, 7, 11, 16, 22, 29, 37])
+    frame = pd.DataFrame({"time": time_axis, "failures": failures})
+    data_path = tmp_path / "go.csv"
+    frame.to_csv(data_path, index=False)
+
+    zip_path = tmp_path / "exp.zip"
+
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    code = run_cli(
+        [
+            str(data_path),
+            "--time-column",
+            "time",
+            "--value-column",
+            "failures",
+            "--model",
+            "go",
+            "--walk-forward",
+            "--cv-min-train",
+            "6",
+            "--rank-by",
+            "cv_rmse",
+            "--export-experiment",
+            str(zip_path),
+        ],
+        stdout=stdout,
+        stderr=stderr,
+    )
+    assert code == 0
+    assert zip_path.exists()
+
+    stdout2 = io.StringIO()
+    stderr2 = io.StringIO()
+    code2 = run_cli(
+        [
+            "--load-experiment",
+            str(zip_path),
+        ],
+        stdout=stdout2,
+        stderr=stderr2,
+    )
+    assert code2 == 0
+    assert "CV_RMSE" in stdout2.getvalue()
+    assert stderr2.getvalue() == ""

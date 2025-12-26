@@ -27,6 +27,7 @@ from .models import (
 from .reporting import ReportBuilder
 from .services import AnalysisService, WalkForwardConfig
 from .services.experiments import default_experiment_config, export_experiment_zip
+from .services import load_experiment_zip
 
 ModelFactory = Callable[[], ReliabilityModel]
 
@@ -68,7 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
         prog="zdp-cli",
         description="Run reliability models against a dataset and view ranked metrics.",
     )
-    parser.add_argument("path", help="Path to the CSV/Excel dataset containing failure data.")
+    parser.add_argument(
+        "path",
+        nargs="?",
+        help="Path to the CSV/Excel dataset containing failure data.",
+    )
+    parser.add_argument(
+        "--load-experiment",
+        default="",
+        help="Replay a previously exported experiment zip (prints rankings / optional report).",
+    )
     parser.add_argument(
         "--series-type",
         choices=[member.value for member in FailureSeriesType],
@@ -169,6 +179,58 @@ def run_cli(
         if args.series_type is not None
         else None
     )
+
+    if args.load_experiment:
+        try:
+            loaded = load_experiment_zip(args.load_experiment)
+        except Exception as exc:
+            print(f"[ZDP] Failed to load experiment: {exc}", file=stderr)
+            return 1
+
+        ranked = loaded.ranked_results
+        if not ranked:
+            print("[ZDP] No model results found in experiment.", file=stderr)
+            return 4
+
+        show_cv = any(any(k.startswith("cv_") for k in item.result.metrics.keys()) for item in ranked)
+        if show_cv:
+            header = f"{'#':>2}  {'Model':<20}  {'CV_RMSE':>10}  {'CV_MAE':>10}  {'CV_R^2':>8}"
+        else:
+            header = f"{'#':>2}  {'Model':<20}  {'RMSE':>10}  {'MAE':>10}  {'R^2':>8}"
+        print(header, file=stdout)
+        print("-" * len(header), file=stdout)
+        for item in ranked:
+            metrics = item.result.metrics
+            print(
+                (
+                    f"{item.rank:>2}  {item.result.model_name:<20}  "
+                    f"{metrics.get('cv_rmse', float('nan')):>10.4f}  "
+                    f"{metrics.get('cv_mae', float('nan')):>10.4f}  "
+                    f"{metrics.get('cv_r2', float('nan')):>8.4f}"
+                    if show_cv
+                    else f"{item.rank:>2}  {item.result.model_name:<20}  "
+                    f"{metrics.get('rmse', float('nan')):>10.4f}  "
+                    f"{metrics.get('mae', float('nan')):>10.4f}  "
+                    f"{metrics.get('r2', float('nan')):>8.4f}"
+                ),
+                file=stdout,
+            )
+
+        if args.report:
+            try:
+                output_path = Path(args.report)
+                builder = ReportBuilder()
+                builder.build(loaded.dataset, ranked, output_path=output_path)
+                print(f"[ZDP] Report exported to {output_path}", file=stdout)
+            except Exception as exc:  # pragma: no cover - external deps
+                print(f"[ZDP] Failed to export report: {exc}", file=stderr)
+                return 5
+
+        return 0
+
+    if not args.path:
+        print("[ZDP] Missing dataset path (or use --load-experiment).", file=stderr)
+        return 2
 
     try:
         dataset = load_failure_data(
