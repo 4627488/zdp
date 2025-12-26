@@ -1,10 +1,10 @@
-"""PySide6 main window wiring the ZDP workflow (refactored with separate parameters window)."""
+"""PySide6 main window wiring the ZDP workflow."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 import numpy as np
 from PySide6.QtGui import QAction
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
+    QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QProgressBar,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QStatusBar,
     QTableWidget,
@@ -30,6 +32,8 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QDoubleSpinBox,
+    QSpinBox,
 )
 
 from zdp.data import FailureDataset, FailureSeriesType, load_failure_data
@@ -47,7 +51,8 @@ from zdp.models import (
     GM11Model,
 )
 from zdp.reporting import ReportBuilder
-from zdp.services import AnalysisService, RankedModelResult, WalkForwardConfig
+from zdp.services import AnalysisService, RankedModelResult
+from zdp.services import WalkForwardConfig
 from zdp.visualization import (
     MatplotlibCanvas,
     plot_prediction_overview,
@@ -57,10 +62,6 @@ from zdp.visualization import (
 )
 
 from zdp.gui.experiment_window import ExperimentReplayWindow
-from zdp.gui.parameters_window import ParametersWindow, ParametersState
-
-if TYPE_CHECKING:
-    from matplotlib.figure import Figure
 
 
 class AnalysisWorker(QObject):
@@ -113,36 +114,18 @@ class ModelDescriptor:
 
 
 class MainWindow(QMainWindow):
-    """Desktop shell implementing the ZDP workflow (simplified with separate parameters window)."""
+    """Desktop shell implementing the ZDP workflow."""
 
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("软件可靠性分析系统")
-        self.resize(1300, 800)
+        self.resize(1400, 900)
 
         self.dataset: FailureDataset | None = None
         self.analysis_results: list[RankedModelResult] = []
         self._worker_thread: QThread | None = None
         self._model_checkboxes: dict[str, QCheckBox] = {}
         self._experiment_window: ExperimentReplayWindow | None = None
-        self._parameters_window: ParametersWindow | None = None
-        self._parameters_state = ParametersState(
-            walk_forward_enabled=False,
-            cv_min_train_size=0,
-            cv_horizon=1,
-            prediction_interval_enabled=False,
-            pi_alpha=0.05,
-            svr_kernel="rbf",
-            svr_c=10.0,
-            svr_epsilon=0.01,
-            hybrid_c=20.0,
-            hybrid_epsilon=0.01,
-            bp_hidden=32,
-            bp_epochs=100,
-            bp_lr=0.01,
-            bp_momentum=0.9,
-            bp_split=0.8,
-        )
 
         self._build_ui()
         self._install_menu_bar()
@@ -150,6 +133,7 @@ class MainWindow(QMainWindow):
 
     def _install_menu_bar(self) -> None:
         file_menu = self.menuBar().addMenu("文件")
+
         open_experiment = QAction("实验回放…", self)
         open_experiment.triggered.connect(self._open_experiment_replay)
         file_menu.addAction(open_experiment)
@@ -176,12 +160,10 @@ class MainWindow(QMainWindow):
     def _build_left_panel(self) -> QWidget:
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
-
         layout.addWidget(self._build_data_group())
         layout.addWidget(self._build_models_group())
-        layout.addWidget(self._build_controls_group())
+        layout.addWidget(self._build_parameters_group())
+        layout.addWidget(self._build_actions_group())
         layout.addStretch()
         return panel
 
@@ -190,30 +172,28 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(group)
         self.path_field = QLineEdit()
         self.path_field.setReadOnly(True)
-        self.path_field.setPlaceholderText("未加载数据")
         self.import_button = QPushButton("导入数据")
         self.import_button.clicked.connect(self._handle_import_clicked)
         self.data_preview = QPlainTextEdit()
         self.data_preview.setPlaceholderText("加载数据后将在此显示预览……")
         self.data_preview.setReadOnly(True)
-        self.data_preview.setMaximumHeight(100)
         layout.addWidget(self.path_field)
         layout.addWidget(self.import_button)
         layout.addWidget(self.data_preview)
         return group
 
     def _build_models_group(self) -> QGroupBox:
-        group = QGroupBox("模型库（单选）")
+        group = QGroupBox("模型库")
         vbox = QVBoxLayout(group)
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         container = QWidget()
         container_layout = QVBoxLayout(container)
-        container_layout.setSpacing(4)
         self._model_checkboxes.clear()
         for descriptor in self._model_descriptors():
-            checkbox = QCheckBox(f"{descriptor.label}")
+            checkbox = QCheckBox(f"{descriptor.label} — {descriptor.description}")
             checkbox.setChecked(descriptor.key in {"go", "gm", "s-shaped", "svr", "bp"})
+            checkbox.stateChanged.connect(self._update_parameter_visibility)
             self._model_checkboxes[descriptor.key] = checkbox
             container_layout.addWidget(checkbox)
         container_layout.addStretch()
@@ -221,56 +201,195 @@ class MainWindow(QMainWindow):
         vbox.addWidget(scroll_area)
         return group
 
-    def _build_controls_group(self) -> QGroupBox:
+    def _build_parameters_group(self) -> QGroupBox:
+        group = QGroupBox("参数配置")
+        layout = QVBoxLayout(group)
+
+        # -----------------------------
+        # Evaluation / ranking
+        self.evaluation_group = QGroupBox("评估与排行")
+        eval_form = QFormLayout(self.evaluation_group)
+
+        self.walk_forward_check = QCheckBox("启用")
+        self.walk_forward_check.setChecked(False)
+        self.walk_forward_check.stateChanged.connect(self._update_parameter_visibility)
+        eval_form.addRow("Walk-forward 验证", self.walk_forward_check)
+
+        self.cv_horizon_spin = QSpinBox()
+        self.cv_horizon_spin.setRange(1, 50)
+        self.cv_horizon_spin.setValue(1)
+        eval_form.addRow("CV 预测步长", self.cv_horizon_spin)
+
+        self.cv_min_train_spin = QSpinBox()
+        self.cv_min_train_spin.setRange(0, 1000000)
+        self.cv_min_train_spin.setValue(0)
+        eval_form.addRow("CV 最小训练(0自动)", self.cv_min_train_spin)
+
+        layout.addWidget(self.evaluation_group)
+
+        # -----------------------------
+        # Prediction interval
+        self.interval_group = QGroupBox("预测带")
+        interval_form = QFormLayout(self.interval_group)
+
+        self.enable_interval_check = QCheckBox("显示")
+        self.enable_interval_check.setChecked(False)
+        self.enable_interval_check.stateChanged.connect(self._update_parameter_visibility)
+        interval_form.addRow("预测带", self.enable_interval_check)
+
+        self.pi_alpha_spin = QDoubleSpinBox()
+        self.pi_alpha_spin.setRange(0.01, 0.5)
+        self.pi_alpha_spin.setSingleStep(0.01)
+        self.pi_alpha_spin.setValue(0.05)
+        interval_form.addRow("alpha", self.pi_alpha_spin)
+
+        layout.addWidget(self.interval_group)
+
+        # -----------------------------
+        # SVR kernel (shared by SVR + Hybrid)
+        self.kernel_group = QGroupBox("核函数")
+        kernel_form = QFormLayout(self.kernel_group)
+        self.svr_kernel_combo = QComboBox()
+        self.svr_kernel_combo.addItems(["rbf", "poly", "linear", "sigmoid"])
+        kernel_form.addRow("Kernel", self.svr_kernel_combo)
+        layout.addWidget(self.kernel_group)
+
+        # -----------------------------
+        # SVR config
+        self.svr_group = QGroupBox("SVR 参数")
+        svr_form = QFormLayout(self.svr_group)
+        self.svr_c_spin = QDoubleSpinBox()
+        self.svr_c_spin.setRange(0.1, 1000.0)
+        self.svr_c_spin.setValue(10.0)
+        self.svr_c_spin.setSingleStep(1.0)
+        svr_form.addRow("C", self.svr_c_spin)
+
+        self.svr_epsilon_spin = QDoubleSpinBox()
+        self.svr_epsilon_spin.setRange(0.001, 1.0)
+        self.svr_epsilon_spin.setDecimals(3)
+        self.svr_epsilon_spin.setValue(0.01)
+        svr_form.addRow("Epsilon", self.svr_epsilon_spin)
+
+        layout.addWidget(self.svr_group)
+
+        # -----------------------------
+        # Hybrid config
+        self.hybrid_group = QGroupBox("混合模型参数")
+        hybrid_form = QFormLayout(self.hybrid_group)
+        self.hybrid_c_spin = QDoubleSpinBox()
+        self.hybrid_c_spin.setRange(0.1, 1000.0)
+        self.hybrid_c_spin.setValue(20.0)
+        hybrid_form.addRow("SVR C", self.hybrid_c_spin)
+
+        self.hybrid_epsilon_spin = QDoubleSpinBox()
+        self.hybrid_epsilon_spin.setRange(0.001, 1.0)
+        self.hybrid_epsilon_spin.setDecimals(3)
+        self.hybrid_epsilon_spin.setValue(0.01)
+        hybrid_form.addRow("SVR Epsilon", self.hybrid_epsilon_spin)
+
+        layout.addWidget(self.hybrid_group)
+
+        # -----------------------------
+        # BP config
+        self.bp_group = QGroupBox("BP 参数")
+        bp_form = QFormLayout(self.bp_group)
+        self.bp_hidden_spin = QSpinBox()
+        self.bp_hidden_spin.setRange(4, 128)
+        self.bp_hidden_spin.setValue(16)
+        bp_form.addRow("隐藏节点", self.bp_hidden_spin)
+
+        self.bp_epochs_spin = QSpinBox()
+        self.bp_epochs_spin.setRange(50, 5000)
+        self.bp_epochs_spin.setValue(800)
+        bp_form.addRow("迭代次数", self.bp_epochs_spin)
+
+        self.bp_lr_spin = QDoubleSpinBox()
+        self.bp_lr_spin.setRange(0.0001, 1.0)
+        self.bp_lr_spin.setDecimals(4)
+        self.bp_lr_spin.setSingleStep(0.01)
+        self.bp_lr_spin.setValue(0.01)
+        bp_form.addRow("学习率", self.bp_lr_spin)
+
+        self.bp_momentum_spin = QDoubleSpinBox()
+        self.bp_momentum_spin.setRange(0.0, 0.99)
+        self.bp_momentum_spin.setSingleStep(0.05)
+        self.bp_momentum_spin.setValue(0.9)
+        bp_form.addRow("动量", self.bp_momentum_spin)
+
+        self.bp_split_spin = QDoubleSpinBox()
+        self.bp_split_spin.setRange(0.5, 0.95)
+        self.bp_split_spin.setSingleStep(0.05)
+        self.bp_split_spin.setValue(0.8)
+        bp_form.addRow("训练占比", self.bp_split_spin)
+
+        layout.addWidget(self.bp_group)
+
+        layout.addStretch()
+
+        # Initial dependency-driven visibility
+        self._update_parameter_visibility()
+        return group
+
+    @Slot()
+    def _update_parameter_visibility(self) -> None:
+        """Show only controls that are meaningful for current selections."""
+
+        selected_keys = {key for key, cb in self._model_checkboxes.items() if cb.isChecked()}
+
+        has_svr = "svr" in selected_keys
+        has_hybrid = "hybrid" in selected_keys
+        has_bp = "bp" in selected_keys
+
+        # Model-specific blocks
+        self.bp_group.setVisible(has_bp)
+        self.svr_group.setVisible(has_svr)
+        self.hybrid_group.setVisible(has_hybrid)
+        self.kernel_group.setVisible(has_svr or has_hybrid)
+
+        # Evaluation options: only show inner controls when enabled
+        wf = self.walk_forward_check.isChecked()
+        self.cv_horizon_spin.setEnabled(wf)
+        self.cv_min_train_spin.setEnabled(wf)
+
+        # Prediction interval: alpha only relevant when enabled
+        show_interval = self.enable_interval_check.isChecked()
+        self.pi_alpha_spin.setEnabled(show_interval)
+
+    def _build_actions_group(self) -> QGroupBox:
         group = QGroupBox("执行")
         vbox = QVBoxLayout(group)
-        vbox.setSpacing(6)
-
-        params_btn = QPushButton("参数设置…")
-        params_btn.clicked.connect(self._open_parameters_window)
-        vbox.addWidget(params_btn)
-
         self.run_button = QPushButton("运行分析")
         self.run_button.clicked.connect(self._handle_run_clicked)
-        vbox.addWidget(self.run_button)
-
         self.export_button = QPushButton("导出报告")
         self.export_button.clicked.connect(self._handle_export_clicked)
         self.export_button.setEnabled(False)
-        vbox.addWidget(self.export_button)
-
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)
         self.progress_bar.hide()
-        vbox.addWidget(self.progress_bar)
-
-        vbox.addWidget(QLabel("日志"))
         self.log_view = QPlainTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setMaximumHeight(120)
+        self.log_view.setMaximumHeight(150)
+        vbox.addWidget(self.run_button)
+        vbox.addWidget(self.export_button)
+        vbox.addWidget(self.progress_bar)
+        vbox.addWidget(QLabel("控制台"))
         vbox.addWidget(self.log_view)
-
         return group
 
     def _build_right_panel(self) -> QWidget:
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(8, 8, 8, 8)
 
-        # Title
-        layout.addWidget(QLabel("分析结果"))
-
-        # Metrics table
         self.metrics_table = QTableWidget(0, 7)
         self.metrics_table.setHorizontalHeaderLabels(["排名", "模型", "RMSE", "MAE", "R²", "AIC", "BIC"])
         self.metrics_table.horizontalHeader().setStretchLastSection(True)
         layout.addWidget(self.metrics_table)
 
-        # Plot model selector
+        # 图表模型选择（用于残差、U、Y 图切换不同模型）
         selector_row = QWidget()
         selector_layout = QHBoxLayout(selector_row)
         selector_layout.setContentsMargins(0, 0, 0, 0)
-        selector_layout.addWidget(QLabel("诊断模型"))
+        selector_layout.addWidget(QLabel("图表模型"))
         self.plot_model_combo = QComboBox()
         self.plot_model_combo.setEnabled(False)
         self.plot_model_combo.currentIndexChanged.connect(self._update_plots)
@@ -278,7 +397,6 @@ class MainWindow(QMainWindow):
         selector_layout.addStretch()
         layout.addWidget(selector_row)
 
-        # Plot tabs
         self.plot_tabs = QTabWidget()
         self.prediction_canvas = MatplotlibCanvas()
         self.residual_canvas = MatplotlibCanvas()
@@ -295,7 +413,6 @@ class MainWindow(QMainWindow):
     def _wrap_canvas(self, canvas: MatplotlibCanvas) -> QWidget:
         wrapper = QWidget()
         vbox = QVBoxLayout(wrapper)
-        vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(canvas)
         return wrapper
 
@@ -303,23 +420,6 @@ class MainWindow(QMainWindow):
         status_bar = QStatusBar()
         status_bar.showMessage("就绪")
         self.setStatusBar(status_bar)
-
-    # ------------------------------------------------------------------
-    # Parameters window
-    @Slot()
-    def _open_parameters_window(self) -> None:
-        if self._parameters_window is None:
-            self._parameters_window = ParametersWindow(self)
-            self._parameters_window.parameters_changed.connect(self._on_parameters_changed)
-        self._parameters_window.set_state(self._parameters_state)
-        self._parameters_window.show()
-        self._parameters_window.raise_()
-        self._parameters_window.activateWindow()
-
-    @Slot(ParametersState)
-    def _on_parameters_changed(self, state: ParametersState) -> None:
-        self._parameters_state = state
-        self._append_log("参数已更新")
 
     # ------------------------------------------------------------------
     # Data/model helpers
@@ -335,9 +435,9 @@ class MainWindow(QMainWindow):
                 "核回归",
                 lambda: SupportVectorRegressionModel(
                     SVRConfig(
-                        kernel=self._parameters_state.svr_kernel,
-                        c=self._parameters_state.svr_c,
-                        epsilon=self._parameters_state.svr_epsilon,
+                        kernel=self.svr_kernel_combo.currentText(),
+                        c=self.svr_c_spin.value(),
+                        epsilon=self.svr_epsilon_spin.value(),
                     )
                 ),
             ),
@@ -347,11 +447,11 @@ class MainWindow(QMainWindow):
                 "非线性神经网络",
                 lambda: BPNeuralNetworkModel(
                     BPConfig(
-                        hidden_size=self._parameters_state.bp_hidden,
-                        epochs=self._parameters_state.bp_epochs,
-                        learning_rate=self._parameters_state.bp_lr,
-                        momentum=self._parameters_state.bp_momentum,
-                        train_split=self._parameters_state.bp_split,
+                        hidden_size=self.bp_hidden_spin.value(),
+                        epochs=self.bp_epochs_spin.value(),
+                        learning_rate=self.bp_lr_spin.value(),
+                        momentum=self.bp_momentum_spin.value(),
+                        train_split=self.bp_split_spin.value(),
                     )
                 ),
             ),
@@ -361,9 +461,9 @@ class MainWindow(QMainWindow):
                 "混合集成",
                 lambda: EMDHybridModel(
                     HybridConfig(
-                        svr_kernel=self._parameters_state.svr_kernel,
-                        svr_c=self._parameters_state.hybrid_c,
-                        svr_epsilon=self._parameters_state.hybrid_epsilon,
+                        svr_kernel=self.svr_kernel_combo.currentText(),
+                        svr_c=self.hybrid_c_spin.value(),
+                        svr_epsilon=self.hybrid_epsilon_spin.value(),
                     )
                 ),
             ),
@@ -381,9 +481,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Event handlers
     def _handle_import_clicked(self) -> None:
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "选择故障数据集", str(Path.home()), "数据文件 (*.csv *.tsv *.txt *.xls *.xlsx)"
-        )
+        file_path, _ = QFileDialog.getOpenFileName(self, "选择故障数据集", str(Path.home()), "数据文件 (*.csv *.tsv *.txt *.xls *.xlsx)")
         if not file_path:
             return
         try:
@@ -397,7 +495,7 @@ class MainWindow(QMainWindow):
         self.data_preview.setPlainText(
             f"规模: {dataset.size}\n类型: {self._format_series_type(dataset.series_type)}\n预览: {preview}"
         )
-        self._append_log(f"已加载数据集 '{Path(file_path).name}'，共有 {dataset.size} 条记录")
+        self._append_log(f"已加载数据集 '{file_path}'，共有 {dataset.size} 条记录")
         self.export_button.setEnabled(bool(self.analysis_results))
 
     def _handle_run_clicked(self) -> None:
@@ -413,18 +511,21 @@ class MainWindow(QMainWindow):
         self.progress_bar.show()
 
         validation = WalkForwardConfig(
-            enabled=self._parameters_state.walk_forward_enabled,
-            min_train_size=self._parameters_state.cv_min_train_size,
-            horizon=self._parameters_state.cv_horizon,
+            enabled=self.walk_forward_check.isChecked(),
+            min_train_size=(
+                self.cv_min_train_spin.value() if self.cv_min_train_spin.value() > 0 else None
+            ),
+            horizon=self.cv_horizon_spin.value(),
         )
-        pi_alpha = self._parameters_state.pi_alpha if self._parameters_state.prediction_interval_enabled else None
+        rank_by = None
+        pi_alpha = self.pi_alpha_spin.value() if self.enable_interval_check.isChecked() else None
 
         worker = AnalysisWorker(
             self.dataset,
             factories,
             validation=validation,
             prediction_interval_alpha=pi_alpha,
-            rank_by=None,
+            rank_by=rank_by,
         )
         thread = QThread(self)
         worker.moveToThread(thread)
@@ -465,7 +566,10 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "无可导出内容", "请先完成一次分析。")
             return
         output_path, _ = QFileDialog.getSaveFileName(
-            self, "导出 PDF 报告", str(Path.home() / "zdp-report.pdf"), "PDF 文件 (*.pdf)"
+            self,
+            "导出 PDF 报告",
+            str(Path.home() / "zdp-report.pdf"),
+            "PDF 文件 (*.pdf)",
         )
         if not output_path:
             return
@@ -529,9 +633,11 @@ class MainWindow(QMainWindow):
             return
         dataset = self.dataset
         results = self.analysis_results
+        # 预测概览：展示所有模型（不再限制为前 3）
         self.prediction_canvas.draw_plot(
             lambda fig: plot_prediction_overview(fig, dataset, results, max_models=len(results))
         )
+        # 残差 / U / Y 图：根据下拉框选择的模型绘制
         selected = self._selected_plot_result()
         if selected is None:
             selected = results[0]
@@ -553,9 +659,7 @@ class MainWindow(QMainWindow):
             builder(fig)
             return fig
 
-        figures["预测概览"] = build(
-            lambda fig: plot_prediction_overview(fig, dataset, results, max_models=len(results))
-        )
+        figures["预测概览"] = build(lambda fig: plot_prediction_overview(fig, dataset, results, max_models=len(results)))
         figures["残差分析"] = build(lambda fig: plot_residuals(fig, dataset, selected))
         figures["U 图"] = build(lambda fig: plot_u_plot(fig, dataset, selected))
         figures["Y 图"] = build(lambda fig: plot_y_plot(fig, dataset, selected))
