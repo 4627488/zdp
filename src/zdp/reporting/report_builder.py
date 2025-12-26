@@ -58,11 +58,13 @@ def _register_default_cjk_font() -> str:
         pass
 
     font_dir = Path(os.environ.get("WINDIR", r"C:\\Windows")) / "Fonts"
+    # Prefer serif CJK fonts first to make the whole report look like a formal document.
     candidates = [
-        font_dir / "msyh.ttc",  # Microsoft YaHei
+        font_dir / "simsun.ttc",  # SimSun (宋体, serif)
+        font_dir / "simsun.ttf",
+        font_dir / "msyh.ttc",  # Microsoft YaHei (微软雅黑, sans-serif)
         font_dir / "msyhbd.ttc",
-        font_dir / "simhei.ttf",  # SimHei
-        font_dir / "simsun.ttc",  # SimSun
+        font_dir / "simhei.ttf",  # SimHei (黑体, sans-serif)
     ]
     for path in candidates:
         if not path.exists():
@@ -74,7 +76,7 @@ def _register_default_cjk_font() -> str:
             continue
 
     # As a last resort, use built-in font name; Chinese may not render.
-    return "Helvetica"
+    return "Times-Roman"
 
 
 class ReportBuilder:
