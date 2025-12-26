@@ -1,5 +1,4 @@
-// --- 全局样式设置 ---
-#import "@preview/cetz:0.2.2"
+#import "@preview/cetz:0.4.2"
 
 #set page(
   paper: "a4",
@@ -11,7 +10,7 @@
   ],
 )
 
-#set text(font: "Noto Serif SC", size: 10.5pt, lang: "zh")
+#set text(font: "SimSun", size: 10.5pt, lang: "zh")
 #set heading(numbering: "1.1.1")
 
 // --- 封面部分 ---
