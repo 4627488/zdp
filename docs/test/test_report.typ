@@ -2,17 +2,17 @@
 
 #show: doc => doc-template(
   doc-id: "ZDP-2025-001-TR",
-  title: "ZDP 软件可靠性分析系统测试报告 V1.0",
+  title: "Zero-Defect Prediction 软件可靠性分析系统测试报告 V1.0",
   doc-type: "ZDP软件配置项测试报告",
   doc,
 )
 
 = 范围
 == 标识
-本文档为 ZDP (Zero-Defect Prediction) 软件可靠性分析系统的测试报告，标识号为：ZDP-2025-001-TR。
+本文档为 ZDP（Zero-Defect Prediction，零缺陷预测）软件可靠性分析系统的测试报告，标识号为：ZDP-2025-001-TR。
 
 == 系统概述
-ZDP 软件是一款基于 Python 科学计算生态和 PySide6 桌面框架开发的软件可靠性分析工具。主要功能包括：
+ZDP（Zero-Defect Prediction）软件可靠性分析系统是一款基于 Python 科学计算生态和 PySide6 桌面框架开发的软件可靠性分析工具。主要功能包括：
 - 故障数据导入与预处理（CSV/Excel 格式，累计故障数/故障间隔 TBF）
 - 8种可靠性模型拟合（GO, JM, S-Shaped, BP, SVR, Hybrid, GM, Plugin）
 - 可视化图表生成（预测曲线、残差图、U图、Y图）
@@ -30,9 +30,9 @@ ZDP 软件是一款基于 Python 科学计算生态和 PySide6 桌面框架开�
 + GB/T 25000.51-2016《系统与软件工程 系统与软件质量要求和评价(SQuaRE) 第51部分：就绪可用软件产品(RUSP)的质量要求和测试细则》
 + GB/T 15532-2008《计算机软件测试规范》
 + ISO/IEC 25010:2011《系统与软件工程 系统与软件质量模型》
-+ 《ZDP 软件需求规格说明》，2024.12，内部文档
-+ 《ZDP 软件测试计划》，ZDP-2025-001-TP，2025.12.05
-+ 《ZDP 软件测试说明》，ZDP-2025-001-TD，2025.12.10
++ 《ZDP（Zero-Defect Prediction）软件需求规格说明》，2024.12，内部文档
++ 《ZDP（Zero-Defect Prediction）软件测试计划》，ZDP-2025-001-TP，2025.12.05
++ 《ZDP（Zero-Defect Prediction）软件测试说明》，ZDP-2025-001-TD，2025.12.10
 
 = 测试概述
 == 测试工作概述
@@ -104,7 +104,7 @@ ZDP 软件是一款基于 Python 科学计算生态和 PySide6 桌面框架开�
 = 测试实施情况
 == 测试实施时间和地点
 - 测试时间：2025年12月02日 - 2025年12月27日
-- 测试地点：ZDP 项目组测试实验室
+- 测试地点：ZDP（Zero-Defect Prediction）项目组测试实验室
 - 测试环境：Windows 10/11 工作站 + Python 3.10/3.11/3.12 环境
 
 == 测试团队
@@ -549,7 +549,7 @@ ZDP 软件是一款基于 Python 科学计算生态和 PySide6 桌面框架开�
 - 可维护性：良好（代码规范，文档完整）
 - 可移植性：优秀（跨版本兼容性好）
 
-*测试结论*：ZDP 软件可靠性分析系统 v0.1.0 版本通过测试验收，建议发布。
+*测试结论*：ZDP（Zero-Defect Prediction）软件可靠性分析系统 v0.1.0 版本通过测试验收，建议发布。
 
 = 遗留问题说明
 #std-table(

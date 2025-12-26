@@ -2,19 +2,19 @@
 
 #show: doc => doc-template(
   doc-id: "ZDP-2025-001-TD",
-  title: "ZDP 软件可靠性分析系统测试说明 V1.0",
+  title: "Zero-Defect Prediction 软件可靠性分析系统测试说明 V1.0",
   doc-type: "ZDP软件测试说明",
   doc,
 )
 
 = 范围
-本文档适用于 ZDP (Zero-Defect Prediction) 软件可靠性分析系统，包含桌面端 GUI 和命令行 CLI 两种运行模式。
+本文档适用于 ZDP（Zero-Defect Prediction，零缺陷预测）软件可靠性分析系统，包含桌面端 GUI 和命令行 CLI 两种运行模式。
 
 = 测试准备
 == 硬件准备
 #std-table(
   columns: (auto, 1fr, 1fr, 1fr),
-  caption: "ZDP软件需求硬件项",
+  caption: "ZDP软件可靠性分析系统需求硬件项",
   [序号],
   [硬件名称],
   [规格],
@@ -32,7 +32,7 @@
 == 软件准备
 #std-table(
   columns: (auto, 2fr, 1fr),
-  caption: "ZDP软件的软件项",
+  caption: "ZDP软件可靠性分析系统的软件项",
   [序号],
   [软件项名称],
   [版本号],

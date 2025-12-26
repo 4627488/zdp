@@ -2,20 +2,20 @@
 
 #show: doc => doc-template(
   doc-id: "ZDP-2025-001-TP",
-  title: "ZDP 软件可靠性分析系统测试计划 V1.0",
-  doc-type: "ZDP配置项测试计划",
+  title: "Zero-Defect Prediction 软件可靠性分析系统测试计划 V1.0",
+  doc-type: "ZDP软件配置项测试计划",
   doc,
 )
 
 = 范围
-本文档为 ZDP (Zero-Defect Prediction) 软件可靠性分析系统的测试计划文档，适用于 ZDP v0.1.0 版本的功能测试、性能测试、安全测试和兼容性测试。
+本文档为 ZDP（Zero-Defect Prediction，零缺陷预测）软件可靠性分析系统的测试计划文档，适用于 ZDP v0.1.0 版本的功能测试、性能测试、安全测试和兼容性测试。
 
 = 依据和引用文档
 + GB/T 25000.51-2016《系统与软件工程 系统与软件质量要求和评价(SQuaRE) 第51部分：就绪可用软件产品(RUSP)的质量要求和测试细则》
 + GB/T 15532-2008《计算机软件测试规范》
 + ISO/IEC 25010:2011《系统与软件工程 系统与软件质量模型》
-+ 《ZDP 软件需求规格说明》（内部文档）
-+ 《ZDP 软件设计说明》（内部文档）
++ 《ZDP（Zero-Defect Prediction）软件需求规格说明》（内部文档）
++ 《ZDP（Zero-Defect Prediction）软件设计说明》（内部文档）
 
 
 = 测试环境
@@ -44,7 +44,7 @@
 == 软件环境
 #std-table(
   columns: (auto, 2fr, auto, 1fr, 1fr),
-  caption: "ZDP软件测试环境软件项",
+  caption: "ZDP软件可靠性分析系统测试环境软件项",
   [序号],
   [软件项名称],
   [版本],
