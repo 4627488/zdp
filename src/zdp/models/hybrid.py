@@ -32,6 +32,9 @@ class EMDHybridModel(ReliabilityModel):
         self.param_count = 6
         self.components: List[dict[str, float]] = []
 
+    def clone(self) -> "EMDHybridModel":
+        return EMDHybridModel(self.config)
+
     def _fit(
         self,
         dataset: FailureDataset,

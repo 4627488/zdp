@@ -31,6 +31,9 @@ class SupportVectorRegressionModel(ReliabilityModel):
         self.config = config or SVRConfig()
         self._pipeline: Pipeline | None = None
 
+    def clone(self) -> "SupportVectorRegressionModel":
+        return SupportVectorRegressionModel(self.config)
+
     def _fit(
         self,
         dataset: FailureDataset,

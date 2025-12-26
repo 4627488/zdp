@@ -34,6 +34,19 @@ class ReliabilityModel(ABC):
     def supports(self, series_type: FailureSeriesType) -> bool:
         return self.required_series_type in (None, series_type)
 
+    def clone(self) -> "ReliabilityModel":
+        """Create a fresh model instance with the same configuration.
+
+        Subclasses with non-default constructors should override this.
+        """
+
+        try:
+            return type(self)()  # type: ignore[call-arg]
+        except TypeError as exc:
+            raise TypeError(
+                f"Model {self.name} does not support default cloning; override clone()."
+            ) from exc
+
     def fit(
         self,
         dataset: FailureDataset,

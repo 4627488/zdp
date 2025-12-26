@@ -37,6 +37,10 @@ dev = [
 zdp = "zdp.app:run"
 zdp-cli = "zdp.cli:main"
 
+# Plugin models can be registered by other packages via:
+# [project.entry-points."zdp.models"]
+# my_model = "some_pkg.module:MyModel"
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 

@@ -93,5 +93,21 @@ class FailureDataset:
             metadata=new_meta,
         )
 
+    def slice(self, stop: int) -> "FailureDataset":
+        """Return a prefix of this dataset.
+
+        Args:
+            stop: Number of samples to keep from the start (like ``values[:stop]``).
+        """
+
+        if stop <= 0:
+            raise ValueError("stop must be >= 1")
+        return FailureDataset(
+            time_axis=self.time_axis[:stop],
+            values=self.values[:stop],
+            series_type=self.series_type,
+            metadata=self.metadata,
+        )
+
 
 __all__ = ["FailureDataset"]

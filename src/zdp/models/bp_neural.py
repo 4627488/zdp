@@ -47,6 +47,9 @@ class BPNeuralNetworkModel(ReliabilityModel):
         self.loss_curve: list[float] = []
         self.param_count = 3 * self.config.hidden_size + 1
 
+    def clone(self) -> "BPNeuralNetworkModel":
+        return BPNeuralNetworkModel(self.config)
+
     def _build_network(self) -> nn.Module:
         return nn.Sequential(
             nn.Linear(1, self.config.hidden_size),

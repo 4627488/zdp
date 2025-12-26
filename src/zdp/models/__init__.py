@@ -8,6 +8,7 @@ from .jelinski_moranda import JelinskiMorandaModel
 from .s_shaped import SShapedModel
 from .svr import SVRConfig, SupportVectorRegressionModel
 from .gm import GM11Model, GMConfig
+from .plugins import load_plugin_model_factories, iter_all_model_factories
 
 __all__ = [
     "ModelResult",
@@ -23,4 +24,6 @@ __all__ = [
     "HybridConfig",
     "GM11Model",
     "GMConfig",
+    "load_plugin_model_factories",
+    "iter_all_model_factories",
 ]

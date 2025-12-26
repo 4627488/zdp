@@ -118,20 +118,40 @@ class ReportBuilder:
 
         story.append(Paragraph("模型排行榜", styles["Heading2"]))
         story.append(Spacer(1, 6))
-        leaderboard_data = [["排名", "模型", "RMSE", "MAE", "R²", "AIC", "BIC"]]
+        has_cv = any(
+            any(key.startswith("cv_") for key in (row.result.metrics or {}).keys())
+            for row in ranked_results
+        )
+        if has_cv:
+            leaderboard_data = [["排名", "模型", "CV_RMSE", "CV_MAE", "CV_R²", "RMSE", "MAE"]]
+        else:
+            leaderboard_data = [["排名", "模型", "RMSE", "MAE", "R²", "AIC", "BIC"]]
         for row in ranked_results:
             metrics = row.result.metrics
-            leaderboard_data.append(
-                [
-                    str(row.rank),
-                    row.result.model_name,
-                    f"{metrics.get('rmse', 0):.4f}",
-                    f"{metrics.get('mae', 0):.4f}",
-                    f"{metrics.get('r2', 0):.4f}",
-                    f"{metrics.get('aic', 0):.2f}",
-                    f"{metrics.get('bic', 0):.2f}",
-                ]
-            )
+            if has_cv:
+                leaderboard_data.append(
+                    [
+                        str(row.rank),
+                        row.result.model_name,
+                        f"{metrics.get('cv_rmse', float('nan')):.4f}",
+                        f"{metrics.get('cv_mae', float('nan')):.4f}",
+                        f"{metrics.get('cv_r2', float('nan')):.4f}",
+                        f"{metrics.get('rmse', float('nan')):.4f}",
+                        f"{metrics.get('mae', float('nan')):.4f}",
+                    ]
+                )
+            else:
+                leaderboard_data.append(
+                    [
+                        str(row.rank),
+                        row.result.model_name,
+                        f"{metrics.get('rmse', 0):.4f}",
+                        f"{metrics.get('mae', 0):.4f}",
+                        f"{metrics.get('r2', 0):.4f}",
+                        f"{metrics.get('aic', 0):.2f}",
+                        f"{metrics.get('bic', 0):.2f}",
+                    ]
+                )
         leaderboard = Table(leaderboard_data, repeatRows=1, hAlign="LEFT")
         leaderboard.setStyle(
             TableStyle(
@@ -156,7 +176,20 @@ class ReportBuilder:
             if diagnostics:
                 story.append(Spacer(1, 6))
                 story.append(Paragraph("诊断信息", styles["Heading3"]))
+                interval = diagnostics.get("prediction_interval")
+                if isinstance(interval, dict):
+                    alpha = interval.get("alpha")
+                    method = interval.get("method")
+                    sigma = interval.get("sigma")
+                    story.append(
+                        Paragraph(
+                            f"预测带：method={method}, alpha={alpha}, sigma={sigma}",
+                            code_style,
+                        )
+                    )
                 for key, value in diagnostics.items():
+                    if key == "prediction_interval":
+                        continue
                     story.append(Paragraph(f"{key}: {value}", code_style))
             story.append(Spacer(1, 18))
 

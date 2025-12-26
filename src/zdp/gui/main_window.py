@@ -51,6 +51,7 @@ from zdp.models import (
 )
 from zdp.reporting import ReportBuilder
 from zdp.services import AnalysisService, RankedModelResult
+from zdp.services import WalkForwardConfig
 from zdp.visualization import (
     MatplotlibCanvas,
     plot_prediction_overview,
@@ -67,17 +68,33 @@ class AnalysisWorker(QObject):
     failed = Signal(str)
     finished = Signal()
 
-    def __init__(self, dataset: FailureDataset, factories: Sequence[Callable[[], ReliabilityModel]]) -> None:
+    def __init__(
+        self,
+        dataset: FailureDataset,
+        factories: Sequence[Callable[[], ReliabilityModel]],
+        *,
+        validation: WalkForwardConfig,
+        prediction_interval_alpha: float | None,
+        rank_by: str | None,
+    ) -> None:
         super().__init__()
         self._dataset = dataset
         self._factories = list(factories)
+        self._validation = validation
+        self._prediction_interval_alpha = prediction_interval_alpha
+        self._rank_by = rank_by
 
     @Slot()
     def run(self) -> None:
         try:
             models = [factory() for factory in self._factories]
             service = AnalysisService(models)
-            results = service.run(self._dataset)
+            results = service.run(
+                self._dataset,
+                validation=self._validation,
+                prediction_interval_alpha=self._prediction_interval_alpha,
+                rank_by=self._rank_by,
+            )
             self.completed.emit(results)
         except Exception as exc:  # pragma: no cover - GUI runtime
             self.failed.emit(str(exc))
@@ -165,6 +182,30 @@ class MainWindow(QMainWindow):
     def _build_parameters_group(self) -> QGroupBox:
         group = QGroupBox("参数配置")
         form = QFormLayout(group)
+
+        self.walk_forward_check = QCheckBox("启用")
+        self.walk_forward_check.setChecked(False)
+        form.addRow("Walk-forward 验证", self.walk_forward_check)
+
+        self.cv_horizon_spin = QSpinBox()
+        self.cv_horizon_spin.setRange(1, 50)
+        self.cv_horizon_spin.setValue(1)
+        form.addRow("CV 预测步长", self.cv_horizon_spin)
+
+        self.cv_min_train_spin = QSpinBox()
+        self.cv_min_train_spin.setRange(0, 1000000)
+        self.cv_min_train_spin.setValue(0)
+        form.addRow("CV 最小训练(0自动)", self.cv_min_train_spin)
+
+        self.rank_by_field = QLineEdit()
+        self.rank_by_field.setPlaceholderText("留空=rmse 或 cv_rmse")
+        form.addRow("排行指标", self.rank_by_field)
+
+        self.pi_alpha_spin = QDoubleSpinBox()
+        self.pi_alpha_spin.setRange(0.0, 0.5)
+        self.pi_alpha_spin.setSingleStep(0.01)
+        self.pi_alpha_spin.setValue(0.0)
+        form.addRow("预测带 alpha(0关闭)", self.pi_alpha_spin)
 
         self.bp_hidden_spin = QSpinBox()
         self.bp_hidden_spin.setRange(4, 128)
@@ -378,7 +419,24 @@ class MainWindow(QMainWindow):
         self._append_log("开始运行分析……")
         self.run_button.setEnabled(False)
         self.progress_bar.show()
-        worker = AnalysisWorker(self.dataset, factories)
+
+        validation = WalkForwardConfig(
+            enabled=self.walk_forward_check.isChecked(),
+            min_train_size=(
+                self.cv_min_train_spin.value() if self.cv_min_train_spin.value() > 0 else None
+            ),
+            horizon=self.cv_horizon_spin.value(),
+        )
+        rank_by = self.rank_by_field.text().strip() or None
+        pi_alpha = self.pi_alpha_spin.value() if self.pi_alpha_spin.value() > 0 else None
+
+        worker = AnalysisWorker(
+            self.dataset,
+            factories,
+            validation=validation,
+            prediction_interval_alpha=pi_alpha,
+            rank_by=rank_by,
+        )
         thread = QThread(self)
         worker.moveToThread(thread)
         worker.completed.connect(self._handle_analysis_completed)
@@ -437,18 +495,40 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Rendering helpers
     def _populate_metrics_table(self, results: Sequence[RankedModelResult]) -> None:
+        show_cv = any(
+            any(key.startswith("cv_") for key in (ranked.result.metrics or {}).keys())
+            for ranked in results
+        )
+        if show_cv:
+            self.metrics_table.setColumnCount(7)
+            self.metrics_table.setHorizontalHeaderLabels(["排名", "模型", "CV_RMSE", "CV_MAE", "CV_R²", "RMSE", "MAE"])
+        else:
+            self.metrics_table.setColumnCount(7)
+            self.metrics_table.setHorizontalHeaderLabels(["排名", "模型", "RMSE", "MAE", "R²", "AIC", "BIC"])
+
         self.metrics_table.setRowCount(len(results))
         for row, ranked in enumerate(results):
             model_metrics = ranked.result.metrics
-            entries = [
-                str(ranked.rank),
-                ranked.result.model_name,
-                f"{model_metrics.get('rmse', 0):.4f}",
-                f"{model_metrics.get('mae', 0):.4f}",
-                f"{model_metrics.get('r2', 0):.4f}",
-                f"{model_metrics.get('aic', 0):.2f}",
-                f"{model_metrics.get('bic', 0):.2f}",
-            ]
+            if show_cv:
+                entries = [
+                    str(ranked.rank),
+                    ranked.result.model_name,
+                    f"{model_metrics.get('cv_rmse', float('nan')):.4f}",
+                    f"{model_metrics.get('cv_mae', float('nan')):.4f}",
+                    f"{model_metrics.get('cv_r2', float('nan')):.4f}",
+                    f"{model_metrics.get('rmse', float('nan')):.4f}",
+                    f"{model_metrics.get('mae', float('nan')):.4f}",
+                ]
+            else:
+                entries = [
+                    str(ranked.rank),
+                    ranked.result.model_name,
+                    f"{model_metrics.get('rmse', 0):.4f}",
+                    f"{model_metrics.get('mae', 0):.4f}",
+                    f"{model_metrics.get('r2', 0):.4f}",
+                    f"{model_metrics.get('aic', 0):.2f}",
+                    f"{model_metrics.get('bic', 0):.2f}",
+                ]
             for col, value in enumerate(entries):
                 item = QTableWidgetItem(value)
                 self.metrics_table.setItem(row, col, item)

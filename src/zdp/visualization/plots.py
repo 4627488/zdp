@@ -32,6 +32,27 @@ def plot_prediction_overview(
     actual = _actual_series(dataset)
     ax.plot(dataset.time_axis, actual, "o", label="Actual", color="#222222")
     for ranked in ranked_results[:max_models]:
+        diagnostics = ranked.result.diagnostics or {}
+        interval = diagnostics.get("prediction_interval") if isinstance(diagnostics, dict) else None
+        if ranked.rank == 1 and isinstance(interval, dict):
+            lower = interval.get("lower")
+            upper = interval.get("upper")
+            try:
+                lower_arr = np.asarray(lower, dtype=float)
+                upper_arr = np.asarray(upper, dtype=float)
+            except Exception:
+                lower_arr = None
+                upper_arr = None
+            if lower_arr is not None and upper_arr is not None:
+                length = int(min(ranked.result.times.size, lower_arr.size, upper_arr.size))
+                if length >= 2:
+                    ax.fill_between(
+                        ranked.result.times[:length],
+                        lower_arr[:length],
+                        upper_arr[:length],
+                        alpha=0.18,
+                        label=f"{ranked.rank}. {ranked.result.model_name} Interval",
+                    )
         ax.plot(
             ranked.result.times,
             ranked.result.predictions,
