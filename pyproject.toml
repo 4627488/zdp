@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zdp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Zero-Defect Prediction (ZDP) desktop application"
 readme = "README.md"
 authors = [{ name = "ZDP Team" }]
